@@ -63,7 +63,7 @@ export default class MainScene extends Phaser.Scene {
     // Create player sprite (will show placeholder if image fails to load)
     if (this.textures.exists('player')) {
       this.player = this.add.sprite(centerX, centerY - 100, 'player');
-      this.player.setScale(2);
+      this.player.setScale(1); // Reduced from 2 to 1 (50% of previous size)
     } else {
       // Fallback: create a simple circle if image doesn't load
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
@@ -71,10 +71,11 @@ export default class MainScene extends Phaser.Scene {
 
     // Title text
     this.add.text(centerX, 100, 'Telegram TON Game', {
-      fontSize: '28px',
+      fontSize: '32px',
       fill: '#fff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5);
+      fontStyle: 'bold',
+      fontFamily: 'Arial, sans-serif'
+    }).setOrigin(0.5).setResolution(2);
 
     // Telegram user info text
     if (this.telegramUser) {
