@@ -1,7 +1,7 @@
 {
-  "url": "https://your-game-url.com",
+  "url": "http://localhost:3000",
   "name": "Phaser Telegram TON Game",
-  "iconUrl": "https://your-game-url.com/icon.png",
-  "termsOfUseUrl": "https://your-game-url.com/terms",
-  "privacyPolicyUrl": "https://your-game-url.com/privacy"
+  "iconUrl": "http://localhost:3000/assets/player.png",
+  "termsOfUseUrl": "http://localhost:3000",
+  "privacyPolicyUrl": "http://localhost:3000"
 }

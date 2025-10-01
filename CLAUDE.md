@@ -4,7 +4,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Phaser 3 game boilerplate designed specifically for Telegram WebApp deployment with TON blockchain wallet integration and Supabase database backend. The project is mobile-first (portrait 480x800) and uses Vite for bundling.
+This is a Phaser 3 game boilerplate designed specifically for Telegram WebApp deployment with TON blockchain wallet integration and Supabase database backend. The project uses `@ton/phaser-sdk` for game-optimized blockchain integration and Vite for bundling.
+
+**Platform Target: Mobile Only**
+- This game is exclusively for Telegram mobile app (iOS/Android)
+- Portrait orientation with vertical aspect ratio (typical mobile phone dimensions)
+- All UI elements, scenes, and interactions must be designed for touch input only
+- No desktop/landscape support required
 
 ## Development Commands
 
@@ -37,8 +43,8 @@ The architecture follows a client-side demonstration pattern with extensive secu
 2. `create()` - Initialize in this order:
    - Supabase client (from env vars)
    - Telegram user data extraction
-   - UI elements (sprites, buttons, text)
-   - TON Connect initialization
+   - UI elements (sprites, text)
+   - GameFi SDK initialization with Phaser-native connect button
 3. Wallet connection triggers database upsert
 
 ### Key Design Patterns
@@ -49,16 +55,17 @@ The architecture follows a client-side demonstration pattern with extensive secu
 - Falls back to mock user data in development (non-Telegram environment)
 
 **TON Wallet Integration:**
-- Uses `TonConnectUI` from `@tonconnect/ui`
-- Custom UI button instead of built-in TON Connect button
-- Status listener pattern for wallet connect/disconnect events
+- Uses `GameFi` from `@ton/phaser-sdk` (game-optimized wrapper around TON Connect)
+- SDK provides Phaser-native button component via `createConnectButton()`
+- `onWalletChange()` listener pattern for wallet connect/disconnect events
 - Manifest at `public/tonconnect-manifest.json` must be configured with production URL
+- SDK includes game-specific helpers: `buyWithTon()`, `transferTon()`, NFT/jetton interactions
 
 **Supabase Database:**
 - Client initialized with Vite env vars: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
 - User upsert pattern: `telegram_id` (unique), `username`, `wallet_address`, `high_score`
-- Database schema included as comment block at end of MainScene.js (lines 338-382)
-- Contains SQL for table creation, RLS policies, and triggers
+- Database schema must be created in Supabase (see README.md for SQL)
+- Contains table definition, RLS policies, and automatic updated_at trigger
 
 ## Configuration Requirements
 
@@ -77,8 +84,8 @@ The complete schema is in `src/scenes/MainScene.js` (comment block at end). Must
 ## Phaser Configuration Details
 
 **Game Config (src/main.js):**
-- Resolution: 480x800 portrait
-- Scale mode: `Phaser.Scale.FIT` with `CENTER_BOTH`
+- Resolution: Dynamic (uses `window.innerWidth` and `window.innerHeight`)
+- Scale mode: `Phaser.Scale.RESIZE` with `NO_CENTER` for responsive fullscreen
 - Physics: Arcade (gravity disabled by default)
 - Input: Touch/pointer only, single active pointer
 - Auto-renderer selection (WebGL with canvas fallback)
@@ -94,19 +101,19 @@ The complete schema is in `src/scenes/MainScene.js` (comment block at end). Must
 
 Three verification layers needed for production (all marked with TODO/SECURITY NOTE comments):
 
-1. **Telegram Auth Verification** (`verifyTelegramAuth()` at line 117):
+1. **Telegram Auth Verification** (`verifyTelegramAuth()` method):
    - Must verify initData hash on backend using bot token
    - Comments include step-by-step HMAC-SHA256 verification process
    - Check auth_date freshness (< 24 hours)
 
-2. **Wallet Ownership Verification** (`saveUserToSupabase()` at line 245):
+2. **Wallet Ownership Verification** (`saveUserToSupabase()` method):
    - Optionally request signed message from wallet
    - Verify signature on backend before database operations
 
 3. **Backend Database Operations**:
    - All Supabase writes should go through authenticated backend API
    - Current RLS policies are permissive for demo purposes
-   - Example flow commented in lines 283-289
+   - Production requires backend API between client and Supabase
 
 ## Adding New Scenes
 
@@ -116,9 +123,27 @@ Three verification layers needed for production (all marked with TODO/SECURITY N
 4. Access shared state via `this.registry` or scene data passing
 5. Launch scenes with `this.scene.start('SceneKey')` or `this.scene.launch('SceneKey')` for parallel scenes
 
+**Mobile-First Scene Design:**
+- Design all scenes for portrait mobile aspect ratio (approximately 9:16 to 9:20)
+- Use `this.scale.width` and `this.scale.height` for responsive positioning
+- Center important UI elements vertically and horizontally relative to screen dimensions
+- Account for safe areas at top (status bar/notch) and bottom (gesture bar)
+- Test touch target sizes: minimum 44x44 pixels for buttons
+- Consider thumb reach zones: place primary actions in bottom half of screen
+
 ## Telegram WebApp Specifics
 
+**Viewport Configuration for Full Screen:**
 - WebApp auto-expands to full screen on init (line 31-32 in main.js)
+- Critical methods to ensure full expansion:
+  - `window.Telegram.WebApp.expand()` - Expands to maximum available height
+  - `window.Telegram.WebApp.isExpanded` - Check if fully expanded
+  - `window.Telegram.WebApp.viewportHeight` - Get actual viewport height
+  - `window.Telegram.WebApp.viewportStableHeight` - Get stable height (excludes keyboard)
+- Some games may not expand fully if these methods aren't called properly
+- Mobile viewport requires proper handling of safe areas and notches
+
+**Other Telegram APIs:**
 - Access Telegram theme via `window.Telegram.WebApp.themeParams`
 - Vibration available via `window.Telegram.WebApp.HapticFeedback`
 - Close app with `window.Telegram.WebApp.close()`
@@ -128,4 +153,27 @@ Three verification layers needed for production (all marked with TODO/SECURITY N
 Assets load from `public/assets/` directory:
 - Reference as `/assets/filename.png` in load calls
 - Includes error handling with fallback graphics (`loaderror` listener in preload)
-- Example fallback: circle shape if player sprite fails (line 46)
+- Example fallback: circle shape if player sprite fails to load
+
+## TON SDK Game Features
+
+The `@ton/phaser-sdk` provides game-specific blockchain methods accessible via `this.gameFi`:
+
+**Wallet Management:**
+- `gameFi.createConnectButton({ scene, x, y })` - Create Phaser-native connect button
+- `gameFi.wallet` - Get current wallet info
+- `gameFi.onWalletChange(callback)` - Listen to connection changes
+
+**In-Game Purchases:**
+- `gameFi.buyWithTon({ amount, description })` - Accept TON payments
+- `gameFi.transferTon({ to, amount })` - Send TON to addresses
+
+**NFT/SBT Integration:**
+- `gameFi.openNftCollection()` - Interact with NFT contracts
+- Methods for minting, transferring, and querying NFTs
+
+**Jetton (Token) Operations:**
+- Support for custom game tokens
+- Transfer and balance checking
+
+See [@ton/phaser-sdk documentation](https://ton-org.github.io/game-engines-sdk/) for complete API reference.
