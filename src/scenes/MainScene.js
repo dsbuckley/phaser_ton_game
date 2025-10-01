@@ -74,7 +74,7 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '32px',
       fill: '#fff',
       fontStyle: 'bold',
-      fontFamily: 'Arial, sans-serif'
+      fontFamily: 'Tilt Warp'
     }).setOrigin(0.5).setResolution(2);
 
     // Telegram user info text
@@ -83,7 +83,8 @@ export default class MainScene extends Phaser.Scene {
         `User: ${this.telegramUser.username || 'Anonymous'}\nID: ${this.telegramUser.id}`, {
         fontSize: '16px',
         fill: '#aaa',
-        align: 'center'
+        align: 'center',
+        fontFamily: 'LINESeed'
       }).setOrigin(0.5);
     }
 
@@ -92,7 +93,8 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '14px',
       fill: '#0088cc',
       align: 'center',
-      wordWrap: { width: 400 }
+      wordWrap: { width: 400 },
+      fontFamily: 'LINESeed'
     }).setOrigin(0.5);
 
     // Initialize TON Connect
@@ -215,7 +217,8 @@ export default class MainScene extends Phaser.Scene {
         fontSize: '16px',
         fill: '#ff4444',
         backgroundColor: '#330000',
-        padding: { x: 10, y: 5 }
+        padding: { x: 10, y: 5 },
+        fontFamily: 'LINESeed'
       }).setOrigin(0.5);
     }
   }
@@ -307,7 +310,8 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '16px',
       fill: '#ff4444',
       backgroundColor: '#330000',
-      padding: { x: 10, y: 5 }
+      padding: { x: 10, y: 5 },
+      fontFamily: 'LINESeed'
     }).setOrigin(0.5);
 
     // Auto-remove after 3 seconds
@@ -325,7 +329,8 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '16px',
       fill: '#44ff44',
       backgroundColor: '#003300',
-      padding: { x: 10, y: 5 }
+      padding: { x: 10, y: 5 },
+      fontFamily: 'LINESeed'
     }).setOrigin(0.5);
 
     // Auto-remove after 3 seconds
