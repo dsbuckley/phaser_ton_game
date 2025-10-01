@@ -1,0 +1,18 @@
+{
+  "name": "phaser-telegram-ton-boilerplate",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.90.0",
+    "@tonconnect/ui": "^2.0.9",
+    "@supabase/supabase-js": "^2.39.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
