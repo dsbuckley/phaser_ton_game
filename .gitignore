@@ -2,7 +2,7 @@
 node_modules/
 
 # Build output
-dist/
+# dist/  # Uncomment to ignore dist folder if using Cloudflare Pages build command
 
 # Environment variables
 .env
