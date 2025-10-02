@@ -19,6 +19,7 @@ export default class LoadingScene extends Phaser.Scene {
     // Load all game assets together
     this.load.image('background', '/assets/Demo/Demo_Background/Background01.png');
     this.load.image('player', '/assets/Demo/Demo_Character/SampleCharacter_Knight01.png');
+    this.load.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
 
     // Track loading progress
     this.load.on('progress', (value) => {

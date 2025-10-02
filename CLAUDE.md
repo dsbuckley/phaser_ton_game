@@ -60,6 +60,49 @@ npm run preview
   ```
 - Can be reused for: Health bars, XP bars, loading screens, stamina indicators
 
+**Custom Button Pattern** (TON Connect Button in `src/scenes/MainScene.js`):
+- Uses NineSlice technique for scalable buttons with preserved rounded corners
+- Built with LayerLab button assets from GUI Casual Fantasy pack
+- **Implementation details:**
+  - Asset: `/assets/Components/Button/Button01_Demo_Green.png`
+  - NineSlice configuration: 20px slices on all sides to preserve corners
+  - Dimensions: 280x80 pixels (width x height)
+  - Text overlay: LINESeed font with stroke for readability
+  - Interactive states: Normal, Hover (lighter tint), Connected (bright tint)
+- **Usage example:**
+  ```javascript
+  // Create button with NineSlice
+  this.connectButton = this.add.nineslice(
+    centerX, buttonY,
+    'btn_green',
+    null,
+    280, 80, // Width and height
+    20, 20, 20, 20 // Left, right, top, bottom slices
+  ).setOrigin(0.5)
+    .setInteractive({ useHandCursor: true });
+
+  // Add text overlay
+  this.buttonText = this.add.text(centerX, buttonY, 'Button Text', {
+    fontFamily: 'LINESeed',
+    fontSize: '20px',
+    fill: '#fff',
+    fontStyle: 'bold',
+    stroke: '#000000',
+    strokeThickness: 3,
+    resolution: 2
+  }).setOrigin(0.5);
+
+  // Hover effect
+  this.connectButton.on('pointerover', () => {
+    this.connectButton.setTint(0xddffdd); // Lighter tint
+  });
+  this.connectButton.on('pointerout', () => {
+    this.connectButton.clearTint(); // Reset
+  });
+  ```
+- **Why NineSlice:** Prevents distortion of rounded corners when scaling buttons to different sizes
+- Can be reused for: Any game buttons, menu navigation, action buttons, dialog confirmations
+
 ### Core Integration Pattern
 The architecture follows a client-side demonstration pattern with extensive security comments indicating where backend verification is required:
 

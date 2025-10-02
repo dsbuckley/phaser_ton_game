@@ -162,24 +162,36 @@ export default class MainScene extends Phaser.Scene {
     const centerX = this.cameras.main.width / 2;
     const buttonY = this.cameras.main.height - 150;
 
-    // Button background
-    this.connectButton = this.add.rectangle(centerX, buttonY, 280, 60, 0x0088cc)
+    // Button background using NineSlice to preserve rounded corners
+    // Button asset is approximately 200x68px with rounded corners (~20px radius)
+    this.connectButton = this.add.nineslice(
+      centerX, buttonY,
+      'btn_green',
+      null,
+      280, 70, // Width and height
+      20, 20, 20, 20 // Left, right, top, bottom slices to preserve corners
+    ).setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
 
-    // Button text
+    // Button text overlay
     this.connectButtonText = this.add.text(centerX, buttonY, 'Connect TON Wallet', {
+      fontFamily: 'LINESeed',
       fontSize: '20px',
       fill: '#fff',
-      fontStyle: 'bold'
+      fontStyle: 'bold',
+      stroke: '#000000',
+      strokeThickness: 3,
+      padding: { x: 10, y: 10 },
+      resolution: 2
     }).setOrigin(0.5);
 
     // Button hover effects
     this.connectButton.on('pointerover', () => {
-      this.connectButton.setFillStyle(0x0099dd);
+      this.connectButton.setTint(0xddffdd); // Lighter green tint on hover
     });
 
     this.connectButton.on('pointerout', () => {
-      this.connectButton.setFillStyle(0x0088cc);
+      this.connectButton.clearTint(); // Remove tint
     });
 
     // Button tap handler
@@ -237,7 +249,7 @@ export default class MainScene extends Phaser.Scene {
       console.log('Wallet connected:', this.walletAddress);
 
       // Update UI
-      this.connectButton.setFillStyle(0x00cc88);
+      this.connectButton.setTint(0x88ffaa); // Bright green tint for connected state
       this.connectButtonText.setText('Wallet Connected');
 
       const shortAddress = this.walletAddress.slice(0, 6) + '...' + this.walletAddress.slice(-4);
@@ -254,7 +266,7 @@ export default class MainScene extends Phaser.Scene {
 
   onWalletDisconnected() {
     this.walletAddress = null;
-    this.connectButton.setFillStyle(0x0088cc);
+    this.connectButton.clearTint(); // Reset to original green color
     this.connectButtonText.setText('Connect TON Wallet');
     this.walletText.setText('');
     console.log('Wallet disconnected');
