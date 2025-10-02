@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import LoadingSlider from '../components/LoadingSlider.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -6,8 +7,10 @@ export default class LoadingScene extends Phaser.Scene {
   }
 
   preload() {
-    // Store progress value for later use
+    // Store progress value and start time
     this.loadProgress = 0;
+    this.loadStartTime = Date.now();
+    this.minLoadTime = 1500; // Minimum 1.5 seconds to show loading
 
     // Load only the loading screen assets first
     this.load.image('slider_bg', '/assets/Components/Slider/Slider_Basic01_Bg.Png');
@@ -37,12 +40,31 @@ export default class LoadingScene extends Phaser.Scene {
 
     this.createLoadingUI();
 
-    // Show final progress
-    this.updateProgress(this.loadProgress);
+    // Simulate progressive loading animation over 1 second
+    this.animateProgress();
+  }
 
-    // Transition to MainScene after a short delay
-    this.time.delayedCall(800, () => {
-      this.scene.start('MainScene');
+  animateProgress() {
+    // Animate from 0 to 100% over 1 second for visual effect
+    this.tweens.add({
+      targets: { value: 0 },
+      value: 1,
+      duration: 1000,
+      ease: 'Power2',
+      onUpdate: (tween) => {
+        const progress = tween.getValue();
+        this.loadingSlider.setProgress(progress, false);
+      },
+      onComplete: () => {
+        // Check if minimum load time has passed
+        const elapsed = Date.now() - this.loadStartTime;
+        const remaining = Math.max(0, this.minLoadTime - elapsed);
+
+        // Wait for remaining time before transitioning
+        this.time.delayedCall(remaining, () => {
+          this.scene.start('MainScene');
+        });
+      }
     });
   }
 
@@ -69,59 +91,36 @@ export default class LoadingScene extends Phaser.Scene {
       resolution: 2
     }).setOrigin(0.5);
 
-    // Progress bar background
-    const barWidth = 400;
-    const barHeight = 50;
-    const barY = centerY;
+    // Create loading slider component
+    // TileSprite will repeat the pattern, so we can use any size
+    const barWidth = Math.min(380, this.cameras.main.width * 0.85); // Responsive width
+    const barHeight = 60; // Height that shows the pattern well
 
-    this.progressBg = this.add.image(centerX, barY, 'slider_bg');
-    this.progressBg.setDisplaySize(barWidth, barHeight);
-
-    // Progress bar fill (magenta) - will be scaled based on progress
-    // Use left origin for easier width scaling
-    this.progressFill = this.add.image(centerX - barWidth/2, barY, 'slider_fill_magenta');
-    this.progressFill.setDisplaySize(barWidth, barHeight);
-    this.progressFill.setOrigin(0, 0.5);
-
-    // Start with 0 width
-    this.progressFill.setScale(0, 1);
-
-    // Progress text (999 / 999 format)
-    this.progressText = this.add.text(centerX, barY, '0 / 0', {
+    this.loadingSlider = new LoadingSlider(this, centerX, centerY, {
+      bgTexture: 'slider_bg',
+      fillTexture: 'slider_fill_magenta',
+      width: barWidth,
+      height: barHeight,
+      textFormat: 'fraction', // Shows "999 / 999" format
       fontFamily: 'LINESeed',
       fontSize: '20px',
-      fill: '#fff',
-      fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3,
-      resolution: 2
-    }).setOrigin(0.5);
+      textColor: '#ffffff',
+      textStroke: '#000000',
+      textStrokeThickness: 3
+    });
+
+    this.add.existing(this.loadingSlider);
+
+    // Set initial progress from preload
+    this.loadingSlider.setProgress(this.loadProgress, false);
 
     // Loading text below progress bar
-    this.loadingText = this.add.text(centerX, barY + 80, 'LOADING...', {
+    this.loadingText = this.add.text(centerX, centerY + 80, 'LOADING...', {
       fontFamily: 'LINESeed',
       fontSize: '24px',
       fill: '#fff',
       fontStyle: 'bold',
       resolution: 2
     }).setOrigin(0.5);
-  }
-
-
-  updateProgress(value) {
-    // value is between 0 and 1
-    const percentage = Math.floor(value * 100);
-
-    // Update the scale to show progress (scaleX from 0 to 1)
-    if (this.progressFill) {
-      this.progressFill.setScale(value, 1);
-    }
-
-    // Update progress text
-    if (this.progressText) {
-      const total = 100;
-      const current = percentage;
-      this.progressText.setText(`${current} / ${total}`);
-    }
   }
 }

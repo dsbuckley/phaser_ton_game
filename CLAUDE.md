@@ -33,7 +33,32 @@ npm run preview
 ### Entry Point Flow
 1. **index.html** → Loads Telegram WebApp SDK and imports `src/main.js`
 2. **src/main.js** → Initializes Phaser game config, expands Telegram WebApp, registers scenes
-3. **src/scenes/MainScene.js** → Main game scene with all integration logic
+3. **src/scenes/LoadingScene.js** → Loading screen with progress bar (shows first)
+4. **src/scenes/MainScene.js** → Main game scene with all integration logic
+
+### Reusable Components
+
+**LoadingSlider Component** (`src/components/LoadingSlider.js`):
+- Reusable progress bar using LayerLab slider assets with NineSlice technique
+- Extends `Phaser.GameObjects.Container` for easy positioning and scaling
+- **Key features:**
+  - Uses `scene.add.nineslice()` to prevent distortion (NEVER use sprite/tilesprite for sliders)
+  - GeometryMask for smooth progress reveal
+  - Configurable textures, colors, text format ("999/999" or "45%")
+  - Smooth tween animations with `setProgress(value, animate)`
+- **Usage example:**
+  ```javascript
+  const slider = new LoadingSlider(scene, x, y, {
+    bgTexture: 'slider_bg',
+    fillTexture: 'slider_fill_magenta',
+    width: 380,
+    height: 60,
+    textFormat: 'fraction' // or 'percentage'
+  });
+  scene.add.existing(slider);
+  slider.setProgress(0.75, true); // Animate to 75%
+  ```
+- Can be reused for: Health bars, XP bars, loading screens, stamina indicators
 
 ### Core Integration Pattern
 The architecture follows a client-side demonstration pattern with extensive security comments indicating where backend verification is required:
@@ -758,8 +783,20 @@ Visual reference images showing how components combine into complete UI elements
 
 **Slider Design Patterns:**
 - **Two-part system:** Most sliders use separate Bg and Fill images
-- **Crop technique:** Dynamically crop/scale Fill image based on percentage
-- **Layering order:** Bg → Fill → Text/Icons/Markers on top
+- **CRITICAL: Use NineSlice, NOT TileSprite or Sprite scaling:**
+  - Slider assets are small pill shapes (18x60px fill, 26x68px bg) designed for 9-slice scaling
+  - **NEVER use `scene.add.sprite()` or `scene.add.tileSprite()`** - these will stretch/tile and look bad
+  - **ALWAYS use `scene.add.nineslice()`** to preserve rounded corners while stretching middle
+  - Example for Slider_Basic01:
+    ```javascript
+    // Background (26x68px): corners = 13px, top/bottom = 34px
+    this.bg = scene.add.nineslice(x, y, 'slider_bg', null, width, height, 13, 13, 34, 34);
+
+    // Fill (18x60px): corners = 9px, top/bottom = 30px
+    this.fill = scene.add.nineslice(x, y, 'slider_fill', null, width, height, 9, 9, 30, 30);
+    ```
+- **Mask technique for progress:** Use GeometryMask to reveal fill progressively (see `src/components/LoadingSlider.js`)
+- **Layering order:** Bg → Fill (masked) → Text/Icons/Markers on top
 - **Color consistency:** Use same color family for related stats (health=red, mana=blue, stamina=green)
 
 ### UI Extras Assemblies (`Catalog/CasualFantasy_UI_Etc.png`)
