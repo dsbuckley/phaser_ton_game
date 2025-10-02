@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import LoadingScene from './scenes/LoadingScene.js';
 import MainScene from './scenes/MainScene.js';
 
 const config = {
@@ -22,7 +23,7 @@ const config = {
     touch: true,
     mouse: true
   },
-  scene: [MainScene],
+  scene: [LoadingScene, MainScene],
   backgroundColor: '#1a1a2e'
 };
 

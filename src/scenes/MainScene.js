@@ -11,26 +11,6 @@ export default class MainScene extends Phaser.Scene {
     this.walletAddress = null;
   }
 
-  preload() {
-    // Load background
-    this.load.image('background', '/assets/Demo/Demo_Background/Background01.png');
-
-    // Load player sprite
-    this.load.image('player', '/assets/Demo/Demo_Character/SampleCharacter_Knight01.png');
-
-    // Handle loading errors gracefully
-    this.load.on('loaderror', (file) => {
-      console.warn(`Failed to load: ${file.key}`);
-    });
-
-    // Wait for fonts to load
-    this.load.on('complete', () => {
-      document.fonts.ready.then(() => {
-        console.log('Fonts loaded');
-      });
-    });
-  }
-
   create() {
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
@@ -42,24 +22,8 @@ export default class MainScene extends Phaser.Scene {
     // Get Telegram WebApp user data
     this.getTelegramUserData();
 
-    // Wait for Tilt Warp font to load before creating UI
-    this.waitForFont();
-  }
-
-  async waitForFont() {
-    console.log('Waiting for Tilt Warp font to load...');
-    try {
-      // Force load the font by trying to use it
-      await document.fonts.load('20px "Tilt Warp"');
-      console.log('Font loaded successfully');
-      this.createUI();
-    } catch (error) {
-      console.error('Font loading error:', error);
-      // Create UI anyway after a short delay
-      this.time.delayedCall(500, () => {
-        this.createUI();
-      });
-    }
+    // Create UI (assets and fonts already loaded by LoadingScene)
+    this.createUI();
   }
 
   createUI() {
