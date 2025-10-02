@@ -110,9 +110,9 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const startX = 70; // Start after avatar
     const availableWidth = this.scene.cameras.main.width - 140; // Space between avatar and settings
 
-    // Pill dimensions - smaller to fit better
-    const pillWidth = 120; // Reduced from 150px
-    const pillGap = 8; // Slightly reduced gap
+    // Pill dimensions - compact to match reference catalog
+    const pillWidth = 82; // Further reduced for tighter fit
+    const pillGap = 4; // Tighter gap for compact layout
 
     // Calculate total width needed and centering offset
     const totalPillsWidth = (pillWidth * resourceCount) + (pillGap * (resourceCount - 1));
@@ -122,7 +122,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       startX: startX + centerOffset,
       pillWidth,
       pillGap,
-      pillHeight: 42 // Reduced from 48px
+      pillHeight: 30 // Further reduced for more compact appearance
     };
   }
 
@@ -173,7 +173,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
         'label_oval_demo',
         null,
         width, height,
-        30, 30, 20, 20 // Slices for oval shape
+        26, 26, 18, 18 // Adjusted slices for smaller oval shape
       ).setOrigin(0, 0.5);
       pillBg.setTint(0x000000); // Black tint for dark appearance
     } else {
@@ -185,9 +185,9 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     }
     this.add(pillBg);
 
-    // Resource icon - sized for compact pills
-    const iconSize = 28; // Reduced from 32px to fit smaller pills
-    const iconX = x + 28; // Closer to left edge
+    // Resource icon - compact size for tight layout
+    const iconSize = 18; // Smaller icon to fit compact pills
+    const iconX = x + 16; // Tighter left padding
     const iconY = y;
 
     let icon;
@@ -200,19 +200,19 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     }
     this.add(icon);
 
-    // Resource value text - positioned on right side
-    const textX = x + width - 35; // Adjusted for smaller pill width
+    // Resource value text - positioned very close to icon
+    const textX = x + 25; // Position very close to icon, left-aligned
     const textY = y;
 
     const valueText = this.scene.add.text(textX, textY, this.formatNumber(value), {
       fontFamily: 'LINESeed',
-      fontSize: '18px', // Reduced from 20px for smaller pills
+      fontSize: '13px', // Smaller font for compact layout
       fill: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 2,
       resolution: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0, 0.5); // Left-align text
     this.add(valueText);
 
     return {
