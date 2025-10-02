@@ -10,7 +10,11 @@ export default class LoadingScene extends Phaser.Scene {
     // Store progress value and start time
     this.loadProgress = 0;
     this.loadStartTime = Date.now();
-    this.minLoadTime = 1500; // Minimum 1.5 seconds to show loading
+
+    // Skip artificial delays on localhost for faster development
+    const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    this.minLoadTime = isLocalhost ? 0 : 1500; // Minimum 1.5 seconds in production only
+    this.animDuration = isLocalhost ? 100 : 1000; // Fast animation on localhost
 
     // Load only the loading screen assets first
     this.load.image('slider_bg', '/assets/Components/Slider/Slider_Basic01_Bg.Png');
@@ -60,11 +64,11 @@ export default class LoadingScene extends Phaser.Scene {
   }
 
   animateProgress() {
-    // Animate from 0 to 100% over 1 second for visual effect
+    // Animate from 0 to 100% (fast on localhost, slower in production)
     this.tweens.add({
       targets: { value: 0 },
       value: 1,
-      duration: 1000,
+      duration: this.animDuration,
       ease: 'Power2',
       onUpdate: (tween) => {
         const progress = tween.getValue();

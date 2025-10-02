@@ -26,8 +26,13 @@ npm run preview         # Preview production build
 ### Entry Point Flow
 1. **index.html** → Loads Telegram WebApp SDK and imports `src/main.js`
 2. **src/main.js** → Initializes Phaser, expands Telegram WebApp, registers scenes
-3. **src/scenes/LoadingScene.js** → Loading screen with progress bar
+3. **src/scenes/LoadingScene.js** → Loading screen with progress bar (environment-aware timing)
 4. **src/scenes/MainScene.js** → Main game scene with all integration logic
+
+**LoadingScene Behavior:**
+- **Localhost:** Skips artificial delays (~100ms load time) for fast development iteration
+- **Production:** Maintains polished 1.5s minimum with smooth animation for branding
+- Detects environment via `window.location.hostname` check
 
 ### Phaser Configuration
 - Resolution: Dynamic (`window.innerWidth/Height`)
@@ -112,10 +117,11 @@ statusBar.setResource('coins', 1500, true); // Animate
 statusBar.setLevel(5);
 ```
 
-**Architecture:** Compact pill layout - 75px wide × 40px high pills with icon (30px) and value text, 10px spacing between pills
+**Architecture:** Compact pill layout - 75px wide × 40px high pills with icon (30px) and value text, 15px spacing between pills
 **Layout:** Avatar (left) → Centered resource pills → Settings button (right)
 **Background Asset:** Uses `statusbar_bg_small` (22×30px) scaled with NineSlice (11,11,15,15) to eliminate visible seams
 **Design:** Icons positioned at x+5 with 30px size, text left-aligned at x+20 in 14px font
+**Spacing Tuning:** 15px gap provides optimal balance between compactness and readability
 **Methods:** `setResource()`, `getResource()`, `setLevel()`, `formatNumber()`, `loadTelegramPhoto()`
 
 ### NineSlice Button Pattern

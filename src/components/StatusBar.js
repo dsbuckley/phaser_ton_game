@@ -112,7 +112,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     // Pill dimensions - compact to match reference catalog
     const pillWidth = 75; // Further reduced for tighter fit
-    const pillGap = 10; // Tighter gap for compact layout
+    const pillGap = 15; // Tighter gap for compact layout
 
     // Calculate total width needed and centering offset
     const totalPillsWidth = (pillWidth * resourceCount) + (pillGap * (resourceCount - 1));
