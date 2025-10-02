@@ -110,27 +110,19 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const startX = 70; // Start after avatar
     const availableWidth = this.scene.cameras.main.width - 140; // Space between avatar and settings
 
-    // New layout: Icon (separate) + Pill (text only)
-    const iconSize = 32; // Larger icon
-    const pillWidth = 75; // Narrower pill for text only
-    const iconPillGap = -8; // Negative gap so icon overlaps pill slightly
-    const resourceGap = 8; // Gap between complete resource displays
-
-    // Total width per resource = icon + overlap + pill
-    const resourceWidth = iconSize + iconPillGap + pillWidth;
+    // Pill dimensions - smaller to fit better
+    const pillWidth = 120; // Reduced from 150px
+    const pillGap = 8; // Slightly reduced gap
 
     // Calculate total width needed and centering offset
-    const totalWidth = (resourceWidth * resourceCount) + (resourceGap * (resourceCount - 1));
-    const centerOffset = (availableWidth - totalWidth) / 2;
+    const totalPillsWidth = (pillWidth * resourceCount) + (pillGap * (resourceCount - 1));
+    const centerOffset = (availableWidth - totalPillsWidth) / 2;
 
     return {
       startX: startX + centerOffset,
-      iconSize,
       pillWidth,
-      iconPillGap,
-      resourceGap,
-      resourceWidth,
-      pillHeight: 36 // Slightly taller pill
+      pillGap,
+      pillHeight: 42 // Reduced from 48px
     };
   }
 
@@ -142,15 +134,16 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     this.resourceDisplays = [];
 
     this.config.resources.forEach((resource, index) => {
-      // Calculate X position for this resource (icon + pill combo)
-      const resourceX = layout.startX + (index * (layout.resourceWidth + layout.resourceGap));
-      const resourceY = 0;
+      // Calculate X position for this pill
+      const pillX = layout.startX + (index * (layout.pillWidth + layout.pillGap));
+      const pillY = 0;
 
-      // Create icon + pill combo
+      // Create pill-shaped background container
       const pill = this.createResourcePill(
-        resourceX,
-        resourceY,
-        layout,
+        pillX,
+        pillY,
+        layout.pillWidth,
+        layout.pillHeight,
         resource.icon,
         resource.value,
         resource.key
@@ -161,73 +154,65 @@ export default class StatusBar extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Create a single pill-shaped resource container with separate icon
-   * @param {number} x - X position for the resource (starting point for icon)
+   * Create a single pill-shaped resource container
+   * @param {number} x - X position
    * @param {number} y - Y position
-   * @param {Object} layout - Layout configuration
+   * @param {number} width - Pill width
+   * @param {number} height - Pill height
    * @param {string} iconKey - Icon texture key
    * @param {number} value - Resource value
    * @param {string} resourceKey - Resource identifier
    * @returns {Object} Object containing pill elements
    */
-  createResourcePill(x, y, layout, iconKey, value, resourceKey) {
-    // Icon position (separate from pill, on the left)
-    const iconX = x + (layout.iconSize / 2);
-    const iconY = y;
-
-    // Create larger icon (outside the pill)
-    let icon;
-    if (this.scene.textures.exists(iconKey)) {
-      icon = this.scene.add.image(iconX, iconY, iconKey);
-      icon.setDisplaySize(layout.iconSize, layout.iconSize);
-      icon.setDepth(2); // Icon on top
-    } else {
-      // Fallback: colored circle
-      icon = this.scene.add.circle(iconX, iconY, layout.iconSize/2, 0xf39c12);
-      icon.setDepth(2);
-    }
-    this.add(icon);
-
-    // Pill background position (starts after icon with overlap)
-    const pillX = x + layout.iconSize + layout.iconPillGap;
-    const pillY = y;
-
+  createResourcePill(x, y, width, height, iconKey, value, resourceKey) {
     // Create pill background using NineSlice for proper scaling
     let pillBg;
     if (this.scene.textures.exists('label_oval_demo')) {
       pillBg = this.scene.add.nineslice(
-        pillX, pillY,
+        x, y,
         'label_oval_demo',
         null,
-        layout.pillWidth, layout.pillHeight,
+        width, height,
         30, 30, 20, 20 // Slices for oval shape
       ).setOrigin(0, 0.5);
       pillBg.setTint(0x000000); // Black tint for dark appearance
-      pillBg.setDepth(1); // Behind icon
     } else {
       // Fallback: draw rounded rectangle
       const graphics = this.scene.add.graphics();
       graphics.fillStyle(0x000000, 0.9);
-      graphics.fillRoundedRect(pillX, pillY - layout.pillHeight/2, layout.pillWidth, layout.pillHeight, layout.pillHeight/2);
+      graphics.fillRoundedRect(x, y - height/2, width, height, height/2); // Pill shape
       pillBg = graphics;
-      pillBg.setDepth(1);
     }
     this.add(pillBg);
 
-    // Resource value text - centered in the pill
-    const textX = pillX + (layout.pillWidth / 2);
-    const textY = pillY;
+    // Resource icon - sized for compact pills
+    const iconSize = 28; // Reduced from 32px to fit smaller pills
+    const iconX = x + 28; // Closer to left edge
+    const iconY = y;
+
+    let icon;
+    if (this.scene.textures.exists(iconKey)) {
+      icon = this.scene.add.image(iconX, iconY, iconKey);
+      icon.setDisplaySize(iconSize, iconSize);
+    } else {
+      // Fallback: colored circle
+      icon = this.scene.add.circle(iconX, iconY, iconSize/2, 0xf39c12);
+    }
+    this.add(icon);
+
+    // Resource value text - positioned on right side
+    const textX = x + width - 35; // Adjusted for smaller pill width
+    const textY = y;
 
     const valueText = this.scene.add.text(textX, textY, this.formatNumber(value), {
       fontFamily: 'LINESeed',
-      fontSize: '16px', // Readable size
+      fontSize: '18px', // Reduced from 20px for smaller pills
       fill: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 2,
       resolution: 2
     }).setOrigin(0.5);
-    valueText.setDepth(2); // On top
     this.add(valueText);
 
     return {
