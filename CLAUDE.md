@@ -819,7 +819,7 @@ Visual reference images showing how components combine into complete UI elements
 - Three color variants: Green (1), Red (1), White (1)
 - Position: Top-right corner of icons/buttons
 - Use for: Unread messages, new items, quest updates
-
+ 
 **Alert_Dot - Simple Indicators:**
 - Minimal dot notifications
 - Red (alert/warning) and White (neutral) variants
