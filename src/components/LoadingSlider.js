@@ -16,7 +16,7 @@ export default class LoadingSlider extends Phaser.GameObjects.Container {
       height: config.height || 50,
       textFormat: config.textFormat || 'fraction', // 'fraction' (999/999) or 'percentage' (45%)
       showText: config.showText !== false, // Show text by default
-      fontFamily: config.fontFamily || 'LINESeed',
+      fontFamily: config.fontFamily || 'Noto Sans',
       fontSize: config.fontSize || '20px',
       textColor: config.textColor || '#ffffff',
       textStroke: config.textStroke || '#000000',
