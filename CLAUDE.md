@@ -60,6 +60,61 @@ npm run preview
   ```
 - Can be reused for: Health bars, XP bars, loading screens, stamina indicators
 
+**StatusBar Component** (`src/components/StatusBar.js`):
+- Reusable top status bar displaying user avatar, resources, and settings button
+- Extends `Phaser.GameObjects.Container` for easy positioning
+- Matches LayerLab asset pack catalog design pattern (icon + pill layout)
+- **Key features:**
+  - User avatar with circular frame and level text (loads Telegram profile photo)
+  - Three resource displays with separate icon + pill background containers
+  - Icons positioned outside pills with slight overlap for modern design
+  - Settings/menu button on the right
+  - Dynamic number formatting (K/M suffixes for large numbers)
+  - Proper depth layering (icon on top, pill behind)
+- **Architecture:**
+  - Icon: 32px, positioned first, overlaps pill edge
+  - Pill: 75px wide, black background, contains only the value text
+  - Layout: Icon overlaps pill by -8px for integrated appearance
+  - Spacing: 8px gap between complete resource displays
+- **Usage example:**
+  ```javascript
+  const statusBar = new StatusBar(scene, 0, 30, {
+    avatarTexture: 'avatar_default',
+    avatarUrl: telegramPhotoUrl, // Optional: Telegram user photo URL
+    userLevel: 4,
+    resources: [
+      { key: 'coins', icon: 'statusbar_coin', value: 0 },
+      { key: 'energy', icon: 'statusbar_energy', value: 37720 },
+      { key: 'gems', icon: 'statusbar_gem', value: 0 }
+    ],
+    onSettingsClick: () => console.log('Settings clicked')
+  });
+  scene.add.existing(statusBar);
+  statusBar.setScrollFactor(0); // Fixed position
+  statusBar.setDepth(1000); // Always on top
+
+  // Update resources dynamically
+  statusBar.setResource('coins', 1500, true); // Animate to 1.5K
+  statusBar.setLevel(5); // Update user level
+  ```
+- **Methods:**
+  - `setResource(key, value, animate)` - Update resource values with optional animation
+  - `getResource(key)` - Get current resource value
+  - `setLevel(level)` - Update user level display
+  - `formatNumber(num)` - Format numbers with K/M suffixes (37720 → "37.72K")
+  - `loadTelegramPhoto(url)` - Dynamically load user profile photo
+- **Design pattern:** Matches catalog StatusBar (see `Catalog/CasualFantasy_UI_Etc.png`)
+  - Icons are separate elements that overlap pill containers
+  - Pills are narrower and only contain text values
+  - Uses NineSlice technique on Label_Oval02_Demo asset
+  - Black tint for dark appearance
+- **Asset requirements:**
+  - `label_oval_demo` - Pill-shaped background for value containers
+  - `statusbar_coin`, `statusbar_energy`, `statusbar_gem` - Resource icons
+  - `avatar_default` - Default avatar icon (Icon_Body.png)
+  - `settings_icon` - Settings gear icon
+- Can be reused for: Any game with resource tracking, inventory displays, player stats
+
 **Custom Button Pattern** (TON Connect Button in `src/scenes/MainScene.js`):
 - Uses NineSlice technique for scalable buttons with preserved rounded corners
 - Built with LayerLab button assets from GUI Casual Fantasy pack

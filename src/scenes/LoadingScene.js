@@ -21,6 +21,19 @@ export default class LoadingScene extends Phaser.Scene {
     this.load.image('player', '/assets/Demo/Demo_Character/SampleCharacter_Knight01.png');
     this.load.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
 
+    // Status bar assets
+    this.load.image('statusbar_bg', '/assets/Components/UI_Etc/Statusbar_Demo_Bg.Png');
+    this.load.image('statusbar_coin', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Coin.Png');
+    this.load.image('statusbar_energy', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Energy.Png');
+    this.load.image('statusbar_gem', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Gem.Png');
+    this.load.image('avatar_frame', '/assets/Components/Frame/BasicFrame_CircleSolid01_White.png');
+    this.load.image('avatar_default', '/assets/Components/IconMisc/Icon_Body.png');
+    this.load.image('settings_icon', '/assets/Components/IconMisc/Icon_Setting01.Png');
+
+    // Pill-shaped container assets for individual resource displays
+    this.load.image('label_oval_demo', '/assets/Components/Label/Label_Oval02_Demo.png');
+    this.load.image('label_oval_white', '/assets/Components/Label/Label_Oval02_White.png');
+
     // Track loading progress
     this.load.on('progress', (value) => {
       this.loadProgress = value;

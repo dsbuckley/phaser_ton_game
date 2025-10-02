@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TonConnectUI } from '@tonconnect/ui';
 import { createClient } from '@supabase/supabase-js';
+import StatusBar from '../components/StatusBar.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -31,6 +32,9 @@ export default class MainScene extends Phaser.Scene {
     const centerX = this.cameras.main.width / 2;
     const centerY = this.cameras.main.height / 2;
 
+    // Create status bar at top of screen
+    this.createStatusBar();
+
     // Add background image
     if (this.textures.exists('background')) {
       const bg = this.add.image(centerX, centerY, 'background');
@@ -51,25 +55,25 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Title text with stroke and shadow
-    this.add.text(centerX, 100, 'Telegram TON Game', {
-      fontFamily: 'LINESeed',
-      fontSize: '32px',
-      fill: '#fff',
-      fontStyle: 'bold',
-      letterSpacing: 2,
-      stroke: '#000000',
-      strokeThickness: 4,
-      padding: { x: 20, y: 20 },
-      shadow: {
-        offsetX: 3,
-        offsetY: 3,
-        color: '#000000',
-        blur: 0,
-        stroke: false,
-        fill: true
-      },
-      resolution: 2
-    }).setOrigin(0.5);
+    // this.add.text(centerX, 100, 'Telegram TON Game', {
+    //   fontFamily: 'LINESeed',
+    //   fontSize: '32px',
+    //   fill: '#fff',
+    //   fontStyle: 'bold',
+    //   letterSpacing: 2,
+    //   stroke: '#000000',
+    //   strokeThickness: 4,
+    //   padding: { x: 20, y: 20 },
+    //   shadow: {
+    //     offsetX: 3,
+    //     offsetY: 3,
+    //     color: '#000000',
+    //     blur: 0,
+    //     stroke: false,
+    //     fill: true
+    //   },
+    //   resolution: 2
+    // }).setOrigin(0.5);
 
     // Telegram user info text
     if (this.telegramUser) {
@@ -94,6 +98,36 @@ export default class MainScene extends Phaser.Scene {
 
     // Initialize TON Connect
     this.initTonConnect();
+  }
+
+  createStatusBar() {
+    // Get Telegram user photo URL if available
+    let avatarUrl = null;
+    if (window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) {
+      avatarUrl = window.Telegram.WebApp.initDataUnsafe.user.photo_url;
+    }
+
+    // Create status bar with initial values - positioned at very top
+    this.statusBar = new StatusBar(this, 0, 30, {
+      avatarTexture: 'avatar_default',
+      avatarUrl: avatarUrl,
+      userLevel: 4, // TODO: Get from user data/database
+      resources: [
+        { key: 'coins', icon: 'statusbar_coin', value: 0 },
+        { key: 'energy', icon: 'statusbar_energy', value: 37720 }, // Example: 37.72K
+        { key: 'gems', icon: 'statusbar_gem', value: 0 }
+      ],
+      onSettingsClick: () => {
+        console.log('Settings button clicked');
+        // TODO: Open settings menu/popup
+      }
+    });
+
+    this.add.existing(this.statusBar);
+
+    // Set status bar to stay at top (fixed position)
+    this.statusBar.setScrollFactor(0);
+    this.statusBar.setDepth(1000); // Ensure it's always on top
   }
 
   getTelegramUserData() {
@@ -168,7 +202,7 @@ export default class MainScene extends Phaser.Scene {
       centerX, buttonY,
       'btn_green',
       null,
-      280, 70, // Width and height
+      280, 80, // Width and height
       20, 20, 20, 20 // Left, right, top, bottom slices to preserve corners
     ).setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
@@ -176,7 +210,7 @@ export default class MainScene extends Phaser.Scene {
     // Button text overlay
     this.connectButtonText = this.add.text(centerX, buttonY, 'Connect TON Wallet', {
       fontFamily: 'LINESeed',
-      fontSize: '20px',
+      fontSize: '24px',
       fill: '#fff',
       fontStyle: 'bold',
       stroke: '#000000',
