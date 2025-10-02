@@ -182,19 +182,19 @@ Assets load from `public/assets/` directory:
 
 ### Fonts
 
-Two fonts are loaded from Google Fonts CDN in `index.html`:
+Two custom fonts are loaded via CDN in `index.html`:
 
 **1. Tilt Warp** (Google Fonts)
 - Playful, warped display font
 - CSS font-family: `'Tilt Warp', sans-serif`
 - Use for: Game titles, flashy UI elements, special effects text
 
-**2. Noto Sans** (Google Fonts)
-- Clean, modern sans-serif with excellent multi-language support
-- CSS font-family: `'Noto Sans', sans-serif`
-- Supports: 800+ languages including English, Japanese, Korean, Thai, Arabic, etc.
+**2. LINE Seed** (LINE Corporation)
+- Clean, modern sans-serif designed for multi-language support
+- CSS font-family: `'LINESeed', sans-serif`
+- Supports: English, Japanese, Korean, Thai, Traditional Chinese
 - Use for: Body text, UI labels, readable game content
-- Reliable CDN delivery, no font loading errors
+- License: SIL Open Font License 1.1
 
 **Using fonts in Phaser:**
 ```javascript
@@ -206,7 +206,7 @@ this.add.text(x, y, 'Text', {
 });
 
 this.add.text(x, y, 'Text', {
-  fontFamily: 'Noto Sans',
+  fontFamily: 'LINESeed',
   fontSize: '24px',
   color: '#ffffff'
 });
@@ -215,14 +215,14 @@ this.add.text(x, y, 'Text', {
 **Font Usage Convention:**
 - **ALWAYS specify fontFamily** in all text objects - never rely on browser defaults
 - **Tilt Warp** for: Game titles, scene headers, achievement popups, flashy announcements
-- **Noto Sans** for: UI labels, body text, stats, user info, messages, tooltips, all readable content
+- **LINESeed** for: UI labels, body text, stats, user info, messages, tooltips, all readable content
 - Example pattern:
   ```javascript
   // Title/Header
   fontFamily: 'Tilt Warp'
 
   // Everything else
-  fontFamily: 'Noto Sans'
+  fontFamily: 'LINESeed'
   ```
 
 ## Phaser Text Rendering Best Practices

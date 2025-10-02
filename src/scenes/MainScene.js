@@ -52,7 +52,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Title text with stroke and shadow
     this.add.text(centerX, 100, 'Telegram TON Game', {
-      fontFamily: 'Noto Sans',
+      fontFamily: 'LINESeed',
       fontSize: '32px',
       fill: '#fff',
       fontStyle: 'bold',

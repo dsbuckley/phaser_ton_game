@@ -102,7 +102,7 @@ export default class LoadingScene extends Phaser.Scene {
       width: barWidth,
       height: barHeight,
       textFormat: 'fraction', // Shows "999 / 999" format
-      fontFamily: 'Noto Sans',
+      fontFamily: 'LINESeed',
       fontSize: '20px',
       textColor: '#ffffff',
       textStroke: '#000000',
@@ -116,7 +116,7 @@ export default class LoadingScene extends Phaser.Scene {
 
     // Loading text below progress bar
     this.loadingText = this.add.text(centerX, centerY + 80, 'LOADING...', {
-      fontFamily: 'Noto Sans',
+      fontFamily: 'LINESeed',
       fontSize: '24px',
       fill: '#fff',
       fontStyle: 'bold',
