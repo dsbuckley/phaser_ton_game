@@ -12,42 +12,26 @@ export default class MainScene extends Phaser.Scene {
   }
 
   preload() {
-    // Load background image
-    console.log('Loading background from /assets/background.png');
-    this.load.image('background', '/assets/background.png');
+    // Load background
+    this.load.image('background', '/assets/Demo/Demo_Background/Background01.png');
 
     // Load player sprite
-    this.load.image('player', '/assets/player.png');
+    this.load.image('player', '/assets/Demo/Demo_Character/SampleCharacter_Knight01.png');
 
     // Handle loading errors gracefully
     this.load.on('loaderror', (file) => {
-      console.error(`Failed to load: ${file.key} from ${file.src}`);
+      console.warn(`Failed to load: ${file.key}`);
     });
 
-    // Confirm successful loads
-    this.load.on('filecomplete', (key, type, data) => {
-      console.log(`Loaded: ${key} (${type})`);
+    // Wait for fonts to load
+    this.load.on('complete', () => {
+      document.fonts.ready.then(() => {
+        console.log('Fonts loaded');
+      });
     });
   }
 
   create() {
-    // Add background image first (scaled to cover entire screen)
-    const centerX = this.cameras.main.width / 2;
-    const centerY = this.cameras.main.height / 2;
-
-    if (this.textures.exists('background')) {
-      const background = this.add.image(centerX, centerY, 'background');
-      // Scale to cover the screen while maintaining aspect ratio
-      const scaleX = this.scale.width / background.width;
-      const scaleY = this.scale.height / background.height;
-      const scale = Math.max(scaleX, scaleY);
-      background.setScale(scale);
-      background.setDepth(-1); // Ensure background is behind everything
-      console.log('Background loaded and scaled:', { width: background.width, height: background.height, scale });
-    } else {
-      console.error('Background texture not found!');
-    }
-
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
@@ -58,24 +42,70 @@ export default class MainScene extends Phaser.Scene {
     // Get Telegram WebApp user data
     this.getTelegramUserData();
 
+    // Wait for Tilt Warp font to load before creating UI
+    this.waitForFont();
+  }
+
+  async waitForFont() {
+    console.log('Waiting for Tilt Warp font to load...');
+    try {
+      // Force load the font by trying to use it
+      await document.fonts.load('20px "Tilt Warp"');
+      console.log('Font loaded successfully');
+      this.createUI();
+    } catch (error) {
+      console.error('Font loading error:', error);
+      // Create UI anyway after a short delay
+      this.time.delayedCall(500, () => {
+        this.createUI();
+      });
+    }
+  }
+
+  createUI() {
     // Display player sprite centered
+    const centerX = this.cameras.main.width / 2;
+    const centerY = this.cameras.main.height / 2;
+
+    // Add background image
+    if (this.textures.exists('background')) {
+      const bg = this.add.image(centerX, centerY, 'background');
+      // Scale background to cover the screen (with slight margin to prevent gaps)
+      const scaleX = this.cameras.main.width / bg.width;
+      const scaleY = this.cameras.main.height / bg.height;
+      const scale = Math.max(scaleX, scaleY) * 1.01;
+      bg.setScale(scale);
+    }
 
     // Create player sprite (will show placeholder if image fails to load)
     if (this.textures.exists('player')) {
-      this.player = this.add.sprite(centerX, centerY - 100, 'player');
-      this.player.setScale(1); // Reduced from 2 to 1 (50% of previous size)
+      this.player = this.add.sprite(centerX, centerY - 0, 'player');
+      this.player.setScale(.5);
     } else {
       // Fallback: create a simple circle if image doesn't load
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
     }
 
-    // Title text
+    // Title text with stroke and shadow
     this.add.text(centerX, 100, 'Telegram TON Game', {
+      fontFamily: 'LINESeed',
       fontSize: '32px',
       fill: '#fff',
       fontStyle: 'bold',
-      fontFamily: 'Tilt Warp'
-    }).setOrigin(0.5).setResolution(2);
+      letterSpacing: 2,
+      stroke: '#000000',
+      strokeThickness: 4,
+      padding: { x: 20, y: 20 },
+      shadow: {
+        offsetX: 3,
+        offsetY: 3,
+        color: '#000000',
+        blur: 0,
+        stroke: false,
+        fill: true
+      },
+      resolution: 2
+    }).setOrigin(0.5);
 
     // Telegram user info text
     if (this.telegramUser) {
@@ -83,8 +113,7 @@ export default class MainScene extends Phaser.Scene {
         `User: ${this.telegramUser.username || 'Anonymous'}\nID: ${this.telegramUser.id}`, {
         fontSize: '16px',
         fill: '#aaa',
-        align: 'center',
-        fontFamily: 'LINESeed'
+        align: 'center'
       }).setOrigin(0.5);
     }
 
@@ -93,9 +122,11 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '14px',
       fill: '#0088cc',
       align: 'center',
-      wordWrap: { width: 400 },
-      fontFamily: 'LINESeed'
+      wordWrap: { width: 400 }
     }).setOrigin(0.5);
+
+    // Create "Connect TON Wallet" button
+    this.createConnectButton();
 
     // Initialize TON Connect
     this.initTonConnect();
@@ -163,34 +194,46 @@ export default class MainScene extends Phaser.Scene {
     return true;
   }
 
+  createConnectButton() {
+    const centerX = this.cameras.main.width / 2;
+    const buttonY = this.cameras.main.height - 150;
+
+    // Button background
+    this.connectButton = this.add.rectangle(centerX, buttonY, 280, 60, 0x0088cc)
+      .setInteractive({ useHandCursor: true });
+
+    // Button text
+    this.connectButtonText = this.add.text(centerX, buttonY, 'Connect TON Wallet', {
+      fontSize: '20px',
+      fill: '#fff',
+      fontStyle: 'bold'
+    }).setOrigin(0.5);
+
+    // Button hover effects
+    this.connectButton.on('pointerover', () => {
+      this.connectButton.setFillStyle(0x0099dd);
+    });
+
+    this.connectButton.on('pointerout', () => {
+      this.connectButton.setFillStyle(0x0088cc);
+    });
+
+    // Button tap handler
+    this.connectButton.on('pointerdown', () => {
+      this.connectWallet();
+    });
+  }
+
   async initTonConnect() {
     try {
-      // Create a DOM element for the button FIRST
-      const buttonContainer = document.createElement('div');
-      buttonContainer.id = 'ton-connect-button';
-      buttonContainer.style.position = 'absolute';
-      buttonContainer.style.bottom = '150px';
-      buttonContainer.style.left = '50%';
-      buttonContainer.style.transform = 'translateX(-50%)';
-      buttonContainer.style.zIndex = '1000';
-      document.body.appendChild(buttonContainer);
-
-      console.log('TonConnect button container created');
-
-      // Initialize TonConnect UI
-      const manifestUrl = window.location.origin + '/tonconnect-manifest.json';
-      console.log('Initializing TonConnect with manifestUrl:', manifestUrl);
-
+      // Initialize TON Connect UI
       this.tonConnectUI = new TonConnectUI({
-        manifestUrl: manifestUrl,
-        buttonRootId: 'ton-connect-button'
+        manifestUrl: window.location.origin + '/tonconnect-manifest.json',
+        buttonRootId: null // We're using custom UI
       });
 
-      console.log('TonConnect UI created successfully');
-
-      // Listen for wallet connection changes
+      // Listen for wallet connection status changes
       this.tonConnectUI.onStatusChange((wallet) => {
-        console.log('Wallet status change:', wallet);
         if (wallet) {
           this.onWalletConnected(wallet);
         } else {
@@ -201,25 +244,24 @@ export default class MainScene extends Phaser.Scene {
       // Check if wallet is already connected
       const currentWallet = this.tonConnectUI.wallet;
       if (currentWallet) {
-        console.log('Wallet already connected:', currentWallet);
         this.onWalletConnected(currentWallet);
       }
-
-      console.log('TonConnect UI initialized successfully');
     } catch (error) {
-      console.error('Failed to initialize TonConnect UI:', error);
-      console.error('Error details:', error.message, error.stack);
+      console.error('Failed to initialize TON Connect:', error);
+    }
+  }
 
-      // Show error message to user
-      const centerX = this.cameras.main.width / 2;
-      const centerY = this.cameras.main.height - 150;
-      this.add.text(centerX, centerY, 'Failed to initialize wallet connection', {
-        fontSize: '16px',
-        fill: '#ff4444',
-        backgroundColor: '#330000',
-        padding: { x: 10, y: 5 },
-        fontFamily: 'LINESeed'
-      }).setOrigin(0.5);
+  async connectWallet() {
+    try {
+      this.connectButtonText.setText('Connecting...');
+
+      // Open TON Connect modal
+      await this.tonConnectUI.openModal();
+
+    } catch (error) {
+      console.error('Wallet connection failed:', error);
+      this.showError('Failed to connect wallet: ' + error.message);
+      this.connectButtonText.setText('Connect TON Wallet');
     }
   }
 
@@ -230,7 +272,10 @@ export default class MainScene extends Phaser.Scene {
 
       console.log('Wallet connected:', this.walletAddress);
 
-      // Update wallet address display
+      // Update UI
+      this.connectButton.setFillStyle(0x00cc88);
+      this.connectButtonText.setText('Wallet Connected');
+
       const shortAddress = this.walletAddress.slice(0, 6) + '...' + this.walletAddress.slice(-4);
       this.walletText.setText(`Wallet: ${shortAddress}`);
 
@@ -245,6 +290,8 @@ export default class MainScene extends Phaser.Scene {
 
   onWalletDisconnected() {
     this.walletAddress = null;
+    this.connectButton.setFillStyle(0x0088cc);
+    this.connectButtonText.setText('Connect TON Wallet');
     this.walletText.setText('');
     console.log('Wallet disconnected');
   }
@@ -310,8 +357,7 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '16px',
       fill: '#ff4444',
       backgroundColor: '#330000',
-      padding: { x: 10, y: 5 },
-      fontFamily: 'LINESeed'
+      padding: { x: 10, y: 5 }
     }).setOrigin(0.5);
 
     // Auto-remove after 3 seconds
@@ -329,8 +375,7 @@ export default class MainScene extends Phaser.Scene {
       fontSize: '16px',
       fill: '#44ff44',
       backgroundColor: '#003300',
-      padding: { x: 10, y: 5 },
-      fontFamily: 'LINESeed'
+      padding: { x: 10, y: 5 }
     }).setOrigin(0.5);
 
     // Auto-remove after 3 seconds

@@ -1,7 +1,9 @@
 import { defineConfig } from 'vite';
 import { nodePolyfills } from 'vite-plugin-node-polyfills';
+import path from 'path';
 
 export default defineConfig({
+  base: './',
   publicDir: 'public',
   plugins: [
     nodePolyfills({
@@ -14,7 +16,16 @@ export default defineConfig({
   ],
   server: {
     port: 3000,
-    open: true
+    open: true,
+    strictPort: false
+  },
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src')
+    }
+  },
+  optimizeDeps: {
+    include: ['phaser', '@ton/phaser-sdk', '@supabase/supabase-js']
   },
   build: {
     rollupOptions: {

@@ -32,6 +32,11 @@ if (window.Telegram?.WebApp) {
   window.Telegram.WebApp.expand();
 }
 
-const game = new Phaser.Game(config);
+// Wait for fonts to load before starting the game
+let game;
+document.fonts.ready.then(() => {
+  console.log('Fonts ready, starting game');
+  game = new Phaser.Game(config);
+});
 
 export default game;

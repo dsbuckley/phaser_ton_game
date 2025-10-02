@@ -200,6 +200,36 @@ this.add.text(x, y, 'Text', {
   fontFamily: 'LINESeed'
   ```
 
+## Phaser Text Rendering Best Practices
+
+**For crisp, readable text on mobile:**
+- Set `resolution: 2` for high-DPI rendering on mobile screens
+- Use `padding: { x: 20, y: 20 }` to prevent stroke/shadow clipping
+- Minimize shadow blur (use `blur: 0` for crisp edges)
+- Background scaling: Use scale multiplier of `1.01` to prevent 1px gaps from float rounding
+- Always wait for fonts to load before creating text objects (see `waitForFont()` in MainScene)
+
+**Example crisp title text:**
+```javascript
+this.add.text(centerX, 100, 'Game Title', {
+  fontFamily: 'Tilt Warp',
+  fontSize: '32px',
+  fill: '#fff',
+  stroke: '#000000',
+  strokeThickness: 6,
+  padding: { x: 20, y: 20 },
+  shadow: {
+    offsetX: 3,
+    offsetY: 3,
+    color: '#000000',
+    blur: 0,  // Zero blur for crisp edges
+    stroke: false,
+    fill: true
+  },
+  resolution: 2  // 2x resolution for sharp rendering
+}).setOrigin(0.5);
+```
+
 ## TON SDK Game Features
 
 The `@ton/phaser-sdk` provides game-specific blockchain methods accessible via `this.gameFi`:
