@@ -23,6 +23,7 @@ export default class LoadingScene extends Phaser.Scene {
 
     // Status bar assets
     this.load.image('statusbar_bg', '/assets/Components/UI_Etc/Statusbar_Demo_Bg.Png');
+    this.load.image('statusbar_bg_small', '/assets/Components/UI_Etc/Statusbar_Demo_Bg Small.png');
     this.load.image('statusbar_coin', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Coin.Png');
     this.load.image('statusbar_energy', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Energy.Png');
     this.load.image('statusbar_gem', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Gem.Png');

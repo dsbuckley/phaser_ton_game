@@ -112,9 +112,10 @@ statusBar.setResource('coins', 1500, true); // Animate
 statusBar.setLevel(5);
 ```
 
-**Architecture:** Ultra-compact pill layout - 82px wide × 30px high pills with small icon (18px) and value text, 4px spacing between pills
+**Architecture:** Compact pill layout - 75px wide × 40px high pills with icon (30px) and value text, 10px spacing between pills
 **Layout:** Avatar (left) → Centered resource pills → Settings button (right)
-**Design:** Icons positioned at x+16 with 18px size, text left-aligned at x+32 in 13px font for tight spacing
+**Background Asset:** Uses `statusbar_bg_small` (22×30px) scaled with NineSlice (11,11,15,15) to eliminate visible seams
+**Design:** Icons positioned at x+5 with 30px size, text left-aligned at x+20 in 14px font
 **Methods:** `setResource()`, `getResource()`, `setLevel()`, `formatNumber()`, `loadTelegramPhoto()`
 
 ### NineSlice Button Pattern

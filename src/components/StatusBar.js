@@ -111,8 +111,8 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const availableWidth = this.scene.cameras.main.width - 140; // Space between avatar and settings
 
     // Pill dimensions - compact to match reference catalog
-    const pillWidth = 82; // Further reduced for tighter fit
-    const pillGap = 4; // Tighter gap for compact layout
+    const pillWidth = 75; // Further reduced for tighter fit
+    const pillGap = 10; // Tighter gap for compact layout
 
     // Calculate total width needed and centering offset
     const totalPillsWidth = (pillWidth * resourceCount) + (pillGap * (resourceCount - 1));
@@ -122,7 +122,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       startX: startX + centerOffset,
       pillWidth,
       pillGap,
-      pillHeight: 30 // Further reduced for more compact appearance
+      pillHeight: 40 // Adjusted to work better with 60px tall asset (avoid excessive squashing)
     };
   }
 
@@ -135,7 +135,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     this.config.resources.forEach((resource, index) => {
       // Calculate X position for this pill
-      const pillX = layout.startX + (index * (layout.pillWidth + layout.pillGap));
+      const pillX = layout.startX + (index * (layout.pillWidth + layout.pillGap)) + 10; // Shift all pills 5px right
       const pillY = 0;
 
       // Create pill-shaped background container
@@ -165,17 +165,17 @@ export default class StatusBar extends Phaser.GameObjects.Container {
    * @returns {Object} Object containing pill elements
    */
   createResourcePill(x, y, width, height, iconKey, value, resourceKey) {
-    // Create pill background using NineSlice for proper scaling
+    // Create pill background using NineSlice - use smaller Statusbar asset
+    // Asset dimensions: 22px × 30px - compact pill-shaped with rounded ends
     let pillBg;
-    if (this.scene.textures.exists('label_oval_demo')) {
+    if (this.scene.textures.exists('statusbar_bg_small')) {
       pillBg = this.scene.add.nineslice(
         x, y,
-        'label_oval_demo',
+        'statusbar_bg_small',
         null,
         width, height,
-        26, 26, 18, 18 // Adjusted slices for smaller oval shape
+        11, 11, 15, 15 // Match asset dimensions: 11px left/right (half of 22), 15px top/bottom (half of 30)
       ).setOrigin(0, 0.5);
-      pillBg.setTint(0x000000); // Black tint for dark appearance
     } else {
       // Fallback: draw rounded rectangle
       const graphics = this.scene.add.graphics();
@@ -186,8 +186,8 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     this.add(pillBg);
 
     // Resource icon - compact size for tight layout
-    const iconSize = 18; // Smaller icon to fit compact pills
-    const iconX = x + 16; // Tighter left padding
+    const iconSize = 30; // Icon size
+    const iconX = x + 5; // Left padding from pill edge (shifted right 5px more)
     const iconY = y;
 
     let icon;
@@ -200,13 +200,13 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     }
     this.add(icon);
 
-    // Resource value text - positioned very close to icon
-    const textX = x + 25; // Position very close to icon, left-aligned
+    // Resource value text - positioned close to icon
+    const textX = x + 20; // Position after icon with small gap (shifted right 5px more)
     const textY = y;
 
     const valueText = this.scene.add.text(textX, textY, this.formatNumber(value), {
       fontFamily: 'LINESeed',
-      fontSize: '13px', // Smaller font for compact layout
+      fontSize: '14px', // Smaller font for compact layout
       fill: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
