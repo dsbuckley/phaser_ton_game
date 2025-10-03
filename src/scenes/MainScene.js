@@ -12,11 +12,6 @@ export default class MainScene extends Phaser.Scene {
     this.walletAddress = null;
   }
 
-  preload() {
-    // Load treasure chest sound
-    this.load.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
-  }
-
   create() {
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
@@ -216,7 +211,7 @@ export default class MainScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     // Button text overlay
-    this.connectButtonText = this.add.text(centerX, buttonY, 'Open Chest', {
+    this.connectButtonText = this.add.text(centerX, buttonY, 'Tap to Open', {
       fontFamily: 'LINESeed',
       fontSize: '24px',
       fill: '#fff',
@@ -314,8 +309,8 @@ export default class MainScene extends Phaser.Scene {
     this.connectButtonText.setText('Opening...');
 
     // Reset button text after animation
-    this.time.delayedCall(1000, () => {
-      this.connectButtonText.setText('Open Chest');
+    this.time.delayedCall(500, () => {
+      this.connectButtonText.setText('Tap to Open');
     });
   }
 

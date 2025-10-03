@@ -39,6 +39,9 @@ export default class LoadingScene extends Phaser.Scene {
     this.load.image('label_oval_demo', '/assets/Components/Label/Label_Oval02_Demo.png');
     this.load.image('label_oval_white', '/assets/Components/Label/Label_Oval02_White.png');
 
+    // Sounds
+    this.load.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
+
     // Track loading progress
     this.load.on('progress', (value) => {
       this.loadProgress = value;
