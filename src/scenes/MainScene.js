@@ -12,6 +12,11 @@ export default class MainScene extends Phaser.Scene {
     this.walletAddress = null;
   }
 
+  preload() {
+    // Load treasure chest sound
+    this.load.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
+  }
+
   create() {
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
@@ -208,7 +213,7 @@ export default class MainScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     // Button text overlay
-    this.connectButtonText = this.add.text(centerX, buttonY, 'Connect TON Wallet', {
+    this.connectButtonText = this.add.text(centerX, buttonY, 'Open Chest', {
       fontFamily: 'LINESeed',
       fontSize: '24px',
       fill: '#fff',
@@ -230,7 +235,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Button tap handler
     this.connectButton.on('pointerdown', () => {
-      this.connectWallet();
+      this.openChest();
     });
   }
 
@@ -259,6 +264,19 @@ export default class MainScene extends Phaser.Scene {
     } catch (error) {
       console.error('Failed to initialize TON Connect:', error);
     }
+  }
+
+  openChest() {
+    // Play treasure chest sound
+    this.sound.play('chest_sound');
+
+    // Visual feedback
+    this.connectButtonText.setText('Opening...');
+
+    // Reset button text after animation
+    this.time.delayedCall(1000, () => {
+      this.connectButtonText.setText('Open Chest');
+    });
   }
 
   async connectWallet() {
