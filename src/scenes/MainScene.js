@@ -215,11 +215,11 @@ export default class MainScene extends Phaser.Scene {
       fontFamily: 'Tilt Warp',
       fill: '#fff',
       fontStyle: 'bold',
-      stroke: '#000000',
-      strokeThickness: 3,
+      // stroke: '#000000',
+      // strokeThickness: 3,
       padding: { x: 10, y: 10 },
       resolution: 3
-    }).setOrigin(0.5).setFontSize(28);
+    }).setOrigin(0.5).setFontSize(28).setStroke('#000000', 3);
 
     // Button hover effects
     this.connectButton.on('pointerover', () => {
