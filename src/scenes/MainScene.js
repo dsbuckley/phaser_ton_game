@@ -48,7 +48,7 @@ export default class MainScene extends Phaser.Scene {
     // Create player sprite (will show placeholder if image fails to load)
     if (this.textures.exists('player')) {
       this.player = this.add.sprite(centerX, centerY - 0, 'player');
-      this.player.setScale(.5);
+      this.player.setScale(0.35);
     } else {
       // Fallback: create a simple circle if image doesn't load
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
@@ -309,7 +309,7 @@ export default class MainScene extends Phaser.Scene {
     this.connectButtonText.setText('Opening...');
 
     // Reset button text after animation
-    this.time.delayedCall(500, () => {
+    this.time.delayedCall(300, () => {
       this.connectButtonText.setText('Tap to Open');
     });
   }
