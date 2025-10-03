@@ -213,14 +213,13 @@ export default class MainScene extends Phaser.Scene {
     // Button text overlay
     this.connectButtonText = this.add.text(centerX, buttonY, 'Tap to Open', {
       fontFamily: 'Tilt Warp',
-      fontSize: '28px',
       fill: '#fff',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 3,
       padding: { x: 10, y: 10 },
       resolution: 3
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setFontSize(28);
 
     // Button hover effects
     this.connectButton.on('pointerover', () => {
