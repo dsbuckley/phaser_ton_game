@@ -201,6 +201,9 @@ export default class MainScene extends Phaser.Scene {
     const centerX = this.cameras.main.width / 2;
     const buttonY = this.cameras.main.height - 150;
 
+    // Store original position for press animation
+    this.buttonOriginalY = buttonY;
+
     // Button background using NineSlice to preserve rounded corners
     // Button asset is approximately 200x68px with rounded corners (~20px radius)
     this.connectButton = this.add.nineslice(
@@ -233,9 +236,46 @@ export default class MainScene extends Phaser.Scene {
       this.connectButton.clearTint(); // Remove tint
     });
 
-    // Button tap handler
+    // Button press down effect
     this.connectButton.on('pointerdown', () => {
+      // Animate button press (scale down, move down, darker tint)
+      this.tweens.add({
+        targets: [this.connectButton, this.connectButtonText],
+        scaleX: 0.95,
+        scaleY: 0.95,
+        y: this.buttonOriginalY + 4,
+        duration: 100,
+        ease: 'Power2'
+      });
+      this.connectButton.setTint(0x88cc88); // Darker green when pressed
+
       this.openChest();
+    });
+
+    // Button release effect (restore original state)
+    this.connectButton.on('pointerup', () => {
+      this.tweens.add({
+        targets: [this.connectButton, this.connectButtonText],
+        scaleX: 1.0,
+        scaleY: 1.0,
+        y: this.buttonOriginalY,
+        duration: 100,
+        ease: 'Back.out'
+      });
+      this.connectButton.clearTint();
+    });
+
+    // Also restore on pointerout (in case user drags off button)
+    this.connectButton.on('pointerout', () => {
+      this.tweens.add({
+        targets: [this.connectButton, this.connectButtonText],
+        scaleX: 1.0,
+        scaleY: 1.0,
+        y: this.buttonOriginalY,
+        duration: 100,
+        ease: 'Back.out'
+      });
+      this.connectButton.clearTint();
     });
   }
 
