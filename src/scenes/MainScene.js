@@ -315,6 +315,11 @@ export default class MainScene extends Phaser.Scene {
     // Play chest opening animation
     this.player.play('chest_open');
 
+    // Trigger coin confetti after 300ms delay
+    this.time.delayedCall(300, () => {
+      this.createCoinConfetti();
+    });
+
     // Reset button text after animation completes (1.5 seconds)
     this.time.delayedCall(1500, () => {
       this.connectButtonText.setText('Tap to Open');
@@ -324,6 +329,59 @@ export default class MainScene extends Phaser.Scene {
     this.time.delayedCall(1500, () => {
       this.player.setTexture('chest_0001');
     });
+  }
+
+  createCoinConfetti() {
+    // Get chest position
+    const chestX = this.player.x;
+    const chestY = this.player.y;
+
+    // Create 15-20 coins bursting from chest
+    const coinCount = Phaser.Math.Between(15, 20);
+
+    for (let i = 0; i < coinCount; i++) {
+      // Create coin sprite
+      const coin = this.physics.add.sprite(chestX, chestY, 'statusbar_coin');
+
+      // Random scale for variety
+      const scale = Phaser.Math.FloatBetween(0.3, 0.5);
+      coin.setScale(scale);
+
+      // Set random physics velocities for burst effect
+      const velocityX = Phaser.Math.Between(-200, 200); // Horizontal spread
+      const velocityY = Phaser.Math.Between(-400, -600); // Upward burst
+      coin.setVelocity(velocityX, velocityY);
+
+      // Apply gravity for realistic arc
+      coin.setGravityY(900);
+
+      // Random rotation for tumbling effect
+      const angularVelocity = Phaser.Math.Between(-360, 360);
+      coin.setAngularVelocity(angularVelocity);
+
+      // Pop-in scale animation
+      coin.setScale(0);
+      this.tweens.add({
+        targets: coin,
+        scaleX: scale,
+        scaleY: scale,
+        duration: 150,
+        ease: 'Back.out'
+      });
+
+      // Fade out and destroy after 2 seconds
+      this.time.delayedCall(1500, () => {
+        this.tweens.add({
+          targets: coin,
+          alpha: 0,
+          duration: 500,
+          ease: 'Power2',
+          onComplete: () => {
+            coin.destroy();
+          }
+        });
+      });
+    }
   }
 
   async connectWallet() {

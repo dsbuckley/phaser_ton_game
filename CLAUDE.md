@@ -374,6 +374,65 @@ openChest() {
 - Optimize file size: WebP format recommended for smaller file sizes
 - For 60fps source video, use every 2nd frame for 30fps playback, or every 4th for 15fps
 
+### Particle/Confetti Effects
+Create burst effects using physics sprites for visual polish.
+
+**Pattern: Coin confetti burst effect**
+
+```javascript
+createCoinConfetti() {
+  const chestX = this.player.x;
+  const chestY = this.player.y;
+  const coinCount = Phaser.Math.Between(15, 20);
+
+  for (let i = 0; i < coinCount; i++) {
+    const coin = this.physics.add.sprite(chestX, chestY, 'statusbar_coin');
+
+    // Random properties for variety
+    const scale = Phaser.Math.FloatBetween(0.3, 0.5);
+    coin.setScale(scale);
+
+    // Physics for burst effect
+    const velocityX = Phaser.Math.Between(-200, 200);
+    const velocityY = Phaser.Math.Between(-400, -600);
+    coin.setVelocity(velocityX, velocityY);
+    coin.setGravityY(900);
+    coin.setAngularVelocity(Phaser.Math.Between(-360, 360));
+
+    // Pop-in animation
+    coin.setScale(0);
+    this.tweens.add({
+      targets: coin,
+      scaleX: scale,
+      scaleY: scale,
+      duration: 150,
+      ease: 'Back.out'
+    });
+
+    // Fade out and cleanup
+    this.time.delayedCall(1500, () => {
+      this.tweens.add({
+        targets: coin,
+        alpha: 0,
+        duration: 500,
+        onComplete: () => coin.destroy()
+      });
+    });
+  }
+}
+
+// Trigger with delay
+this.time.delayedCall(400, () => this.createCoinConfetti());
+```
+
+**Confetti Effect Tips:**
+- Use `physics.add.sprite()` for gravity-based trajectories
+- Randomize velocities, rotation, and scale for natural variety
+- Apply gravity (800-1000) for realistic arcing motion
+- Stagger spawn with delays for more organic feel
+- Always destroy sprites after animation completes to prevent memory leaks
+- Layer effects with tween animations (scale, alpha, rotation)
+
 ## Asset Loading & Error Handling
 
 ```javascript
