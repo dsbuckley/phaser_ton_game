@@ -23,8 +23,28 @@ export default class MainScene extends Phaser.Scene {
     // Get Telegram WebApp user data
     this.getTelegramUserData();
 
+    // Create treasure chest animation
+    this.createChestAnimation();
+
     // Create UI (assets and fonts already loaded by LoadingScene)
     this.createUI();
+  }
+
+  createChestAnimation() {
+    // Build frame array for animation (frames 1, 3, 5, ... 59)
+    const frames = [];
+    for (let i = 1; i <= 60; i += 2) {
+      const frameNum = String(i).padStart(4, '0');
+      frames.push({ key: `chest_${frameNum}` });
+    }
+
+    // Create the animation
+    this.anims.create({
+      key: 'chest_open',
+      frames: frames,
+      frameRate: 30, // 30 frames at 20fps = 1.5 seconds
+      repeat: 0 // Play once
+    });
   }
 
   createUI() {
@@ -45,35 +65,15 @@ export default class MainScene extends Phaser.Scene {
       bg.setScale(scale);
     }
 
-    // Create player sprite (will show placeholder if image fails to load)
-    if (this.textures.exists('player')) {
-      this.player = this.add.sprite(centerX, centerY - 0, 'player');
-      this.player.setScale(0.35);
+    // Create treasure chest sprite (starts with first frame)
+    if (this.textures.exists('chest_0001')) {
+      this.player = this.add.sprite(centerX, centerY - 0, 'chest_0001');
+      this.player.setScale(0.75);
     } else {
       // Fallback: create a simple circle if image doesn't load
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
     }
 
-    // Title text with stroke and shadow
-    // this.add.text(centerX, 100, 'Telegram TON Game', {
-    //   fontFamily: 'LINESeed',
-    //   fontSize: '32px',
-    //   fill: '#fff',
-    //   fontStyle: 'bold',
-    //   letterSpacing: 2,
-    //   stroke: '#000000',
-    //   strokeThickness: 4,
-    //   padding: { x: 20, y: 20 },
-    //   shadow: {
-    //     offsetX: 3,
-    //     offsetY: 3,
-    //     color: '#000000',
-    //     blur: 0,
-    //     stroke: false,
-    //     fill: true
-    //   },
-    //   resolution: 2
-    // }).setOrigin(0.5);
 
     // Telegram user info text
     if (this.telegramUser) {
@@ -301,15 +301,28 @@ export default class MainScene extends Phaser.Scene {
   }
 
   openChest() {
+    // Don't play animation if already playing
+    if (this.player.anims && this.player.anims.isPlaying) {
+      return;
+    }
+
     // Play treasure chest sound
     this.sound.play('chest_sound');
 
     // Visual feedback
     this.connectButtonText.setText('Opening...');
 
-    // Reset button text after animation
-    this.time.delayedCall(300, () => {
+    // Play chest opening animation
+    this.player.play('chest_open');
+
+    // Reset button text after animation completes (1.5 seconds)
+    this.time.delayedCall(1500, () => {
       this.connectButtonText.setText('Tap to Open');
+    });
+
+    // Reset chest to first frame after a short delay
+    this.time.delayedCall(3000, () => {
+      this.player.setTexture('chest_0001');
     });
   }
 

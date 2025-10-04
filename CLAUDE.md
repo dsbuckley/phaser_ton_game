@@ -313,6 +313,67 @@ The `@ton/phaser-sdk` provides blockchain methods via `this.gameFi`:
 
 See [@ton/phaser-sdk docs](https://ton-org.github.io/game-engines-sdk/) for complete API.
 
+## Sprite Animations
+
+### Frame-Based Animations
+Phaser supports sprite sheet animations built from individual image frames.
+
+**Pattern: Loading animation frames from a sequence**
+
+```javascript
+// In LoadingScene.js preload()
+// Load every other frame to reduce animation time
+for (let i = 1; i <= 60; i += 2) {
+  const frameNum = String(i).padStart(4, '0');
+  this.load.image(`chest_${frameNum}`, `/assets/sprites/open treasure/frame_${frameNum}.webp`);
+}
+```
+
+**Pattern: Creating animation from loaded frames**
+
+```javascript
+// In MainScene.js create()
+createChestAnimation() {
+  const frames = [];
+  for (let i = 1; i <= 60; i += 2) {
+    const frameNum = String(i).padStart(4, '0');
+    frames.push({ key: `chest_${frameNum}` });
+  }
+
+  this.anims.create({
+    key: 'chest_open',
+    frames: frames,
+    frameRate: 20, // 30 frames at 20fps = 1.5 seconds
+    repeat: 0 // Play once
+  });
+}
+```
+
+**Pattern: Playing animations with safeguards**
+
+```javascript
+openChest() {
+  // Prevent animation restart if already playing
+  if (this.player.anims && this.player.anims.isPlaying) {
+    return;
+  }
+
+  // Play animation
+  this.player.play('chest_open');
+
+  // Reset to first frame after delay
+  this.time.delayedCall(3000, () => {
+    this.player.setTexture('chest_0001');
+  });
+}
+```
+
+**Frame Optimization Tips:**
+- Skip frames to reduce animation time (use every 2nd or 3rd frame)
+- Use `frameRate` to control animation speed
+- Optimize file size: WebP format recommended for smaller file sizes
+- For 60fps source video, use every 2nd frame for 30fps playback, or every 4th for 15fps
+
 ## Asset Loading & Error Handling
 
 ```javascript

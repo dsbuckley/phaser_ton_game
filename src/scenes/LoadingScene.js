@@ -22,8 +22,14 @@ export default class LoadingScene extends Phaser.Scene {
 
     // Load all game assets together
     this.load.image('background', '/assets/Demo/Demo_Background/Background01.png');
-    this.load.image('player', '/assets/Components/Treasure/treasure chest.webp');
     this.load.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
+
+    // Load treasure chest animation frames (every other frame: 1, 3, 5, ... 59)
+    // This reduces 60 frames to 30 frames, cutting 4s animation to ~1.5s at 20fps
+    for (let i = 1; i <= 60; i += 2) {
+      const frameNum = String(i).padStart(4, '0');
+      this.load.image(`chest_${frameNum}`, `/assets/sprites/open treasure/frame_${frameNum}.webp`);
+    }
 
     // Status bar assets
     this.load.image('statusbar_bg', '/assets/Components/UI_Etc/Statusbar_Demo_Bg.Png');
