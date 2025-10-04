@@ -321,7 +321,7 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // Reset chest to first frame after a short delay
-    this.time.delayedCall(3000, () => {
+    this.time.delayedCall(1500, () => {
       this.player.setTexture('chest_0001');
     });
   }
