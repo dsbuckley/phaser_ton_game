@@ -321,7 +321,7 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // Reset button text after animation completes (1.5 seconds)
-    this.time.delayedCall(1500, () => {
+    this.time.delayedCall(1000, () => {
       this.connectButtonText.setText('Tap to Open');
     });
 
