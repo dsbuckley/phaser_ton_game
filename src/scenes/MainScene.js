@@ -31,9 +31,9 @@ export default class MainScene extends Phaser.Scene {
   }
 
   createChestAnimation() {
-    // Build frame array for animation (frames 1, 3, 5, ... 59)
+    // Build frame array for animation (frames 1, 3, 5, ... 37)
     const frames = [];
-    for (let i = 1; i <= 60; i += 2) {
+    for (let i = 1; i <= 38; i += 2) {
       const frameNum = String(i).padStart(4, '0');
       frames.push({ key: `chest_${frameNum}` });
     }
@@ -42,7 +42,7 @@ export default class MainScene extends Phaser.Scene {
     this.anims.create({
       key: 'chest_open',
       frames: frames,
-      frameRate: 30, // 30 frames at 20fps = 1.5 seconds
+      frameRate: 30, // 19 frames at 30fps = ~0.6 seconds
       repeat: 0 // Play once
     });
   }
@@ -326,7 +326,7 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // Reset chest to first frame after a short delay
-    this.time.delayedCall(1500, () => {
+    this.time.delayedCall(1000, () => {
       this.player.setTexture('chest_0001');
     });
   }
