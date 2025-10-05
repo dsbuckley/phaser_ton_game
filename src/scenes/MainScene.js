@@ -42,7 +42,7 @@ export default class MainScene extends Phaser.Scene {
     this.anims.create({
       key: 'chest_open',
       frames: frames,
-      frameRate: 38, // 38 frames at 38fps = ~1 seconds
+      frameRate: 38, // 19 frames at 38fps = ~0.5 seconds
       repeat: 0 // Play once
     });
 
@@ -309,19 +309,14 @@ export default class MainScene extends Phaser.Scene {
   }
 
   openChest() {
-    // Don't play animation if already playing
-    if (this.player.anims && this.player.anims.isPlaying) {
-      return;
-    }
-
     // Play treasure chest sound
     this.sound.play('chest_sound');
 
     // Visual feedback
     this.connectButtonText.setText('Opening...');
 
-    // Play chest opening animation
-    this.player.play('chest_open');
+    // Restart chest opening animation (restarts if already playing)
+    this.player.play('chest_open', true);
 
     // Trigger coin confetti after 300ms delay
     this.time.delayedCall(300, () => {
@@ -330,7 +325,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Play closing animation after opening completes
     this.time.delayedCall(500, () => {
-      this.player.play('chest_close');
+      this.player.play('chest_close', true);
     });
 
     // Reset button text after animation completes
