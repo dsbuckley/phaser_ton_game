@@ -10,6 +10,7 @@ export default class MainScene extends Phaser.Scene {
     this.supabase = null;
     this.telegramUser = null;
     this.walletAddress = null;
+    this.audioUnlocked = false;
   }
 
   create() {
@@ -310,6 +311,16 @@ export default class MainScene extends Phaser.Scene {
   }
 
   openChest() {
+    // Resume AudioContext on first interaction (required by browsers)
+    if (!this.audioUnlocked) {
+      this.sound.context.resume().then(() => {
+        this.audioUnlocked = true;
+        console.log('Audio unlocked');
+      }).catch(err => {
+        console.warn('Failed to unlock audio:', err);
+      });
+    }
+
     // Play treasure chest sound
     this.sound.play('chest_sound');
 

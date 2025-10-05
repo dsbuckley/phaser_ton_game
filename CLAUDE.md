@@ -317,6 +317,43 @@ The `@ton/phaser-sdk` provides blockchain methods via `this.gameFi`:
 
 See [@ton/phaser-sdk docs](https://ton-org.github.io/game-engines-sdk/) for complete API.
 
+## Audio & Sound
+
+### Web Audio Autoplay Policy
+Browsers require AudioContext to be resumed after a user gesture before playing audio.
+
+**Pattern: Unlock audio on first interaction**
+
+```javascript
+constructor() {
+  super({ key: 'MainScene' });
+  this.audioUnlocked = false;
+}
+
+playSound() {
+  // Resume AudioContext on first interaction (required by browsers)
+  if (!this.audioUnlocked) {
+    this.sound.context.resume().then(() => {
+      this.audioUnlocked = true;
+      console.log('Audio unlocked');
+    }).catch(err => {
+      console.warn('Failed to unlock audio:', err);
+    });
+  }
+
+  // Now safe to play sounds
+  this.sound.play('sound_key');
+}
+```
+
+**Why this is needed:**
+- Chrome/Safari block autoplay audio until user interacts with page
+- Prevents "AudioContext was not allowed to start" console warnings
+- Must call `context.resume()` in response to click/tap event
+- Only needs to happen once per session (tracked with `audioUnlocked` flag)
+
+**Best practice:** Call resume on first button tap, then all subsequent sounds work normally.
+
 ## Sprite Animations
 
 ### Frame-Based Animations
