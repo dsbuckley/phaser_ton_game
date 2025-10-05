@@ -11,6 +11,7 @@ export default class MainScene extends Phaser.Scene {
     this.telegramUser = null;
     this.walletAddress = null;
     this.audioUnlocked = false;
+    this.firstClick = false;
   }
 
   create() {
@@ -113,6 +114,36 @@ export default class MainScene extends Phaser.Scene {
           duration: 100,
           ease: 'Back.out'
         });
+      });
+
+      // Create "Tap Me" text above the chest
+      this.tapMeText = this.add.text(centerX, centerY + 100, 'Tap Me', {
+        fontFamily: 'Tilt Warp',
+        fontSize: '30px',
+        fill: '#FFFFFF',
+        stroke: '#000000',
+        strokeThickness: 3,
+        padding: { x: 20, y: 20 },
+        shadow: {
+          offsetX: 3,
+          offsetY: 3,
+          color: '#000000',
+          blur: 0,
+          stroke: false,
+          fill: true
+        },
+        resolution: 2
+      }).setOrigin(0.5);
+
+      // Create pulsing animation
+      this.tweens.add({
+        targets: this.tapMeText,
+        scaleX: 1.2,
+        scaleY: 1.2,
+        duration: 800,
+        ease: 'Sine.easeInOut',
+        yoyo: true,
+        repeat: -1 // Infinite loop
       });
 
     } else {
@@ -263,6 +294,20 @@ export default class MainScene extends Phaser.Scene {
   }
 
   openChest() {
+    // Hide "Tap Me" text on first click
+    if (!this.firstClick && this.tapMeText) {
+      this.tweens.add({
+        targets: this.tapMeText,
+        alpha: 0,
+        duration: 300,
+        ease: 'Power2',
+        onComplete: () => {
+          this.tapMeText.destroy();
+        }
+      });
+      this.firstClick = true;
+    }
+
     // Resume AudioContext on first interaction (required by browsers)
     if (!this.audioUnlocked) {
       this.sound.context.resume().then(() => {
