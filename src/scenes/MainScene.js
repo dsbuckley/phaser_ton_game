@@ -95,8 +95,8 @@ export default class MainScene extends Phaser.Scene {
       this.player.on('pointerdown', () => {
         this.tweens.add({
           targets: this.player,
-          scaleX: 0.72,
-          scaleY: 0.72,
+          scaleX: 0.80,
+          scaleY: 0.80,
           duration: 100,
           ease: 'Power2'
         });
@@ -108,8 +108,8 @@ export default class MainScene extends Phaser.Scene {
       this.player.on('pointerup', () => {
         this.tweens.add({
           targets: this.player,
-          scaleX: 0.75,
-          scaleY: 0.75,
+          scaleX: 0.85,
+          scaleY: 0.85,
           duration: 100,
           ease: 'Back.out'
         });
