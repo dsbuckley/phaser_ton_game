@@ -30,9 +30,13 @@ npm run preview         # Preview production build
 4. **src/scenes/MainScene.js** → Main game scene with all integration logic
 
 **LoadingScene Behavior:**
-- **Localhost:** Skips artificial delays (~100ms load time) for fast development iteration
-- **Production:** Maintains polished 1.5s minimum with smooth animation for branding
+- **Two-stage loading:** Progress bar assets load first, then all game assets load with visible progress
+- **Stage 1 (preload):** Only loads slider background and fill textures (minimal assets for instant UI)
+- **Stage 2 (create):** Creates UI immediately, then uses secondary LoaderPlugin to load all game assets
+- **Localhost:** Skips artificial delays for fast development iteration
+- **Production:** Maintains polished 1.5s minimum for branding/polish
 - Detects environment via `window.location.hostname` check
+- Real progress tracking shows actual asset loading status (not simulated animation)
 
 ### Phaser Configuration
 - Resolution: Dynamic (`window.innerWidth/Height`)
@@ -434,6 +438,63 @@ this.time.delayedCall(400, () => this.createCoinConfetti());
 - Layer effects with tween animations (scale, alpha, rotation)
 
 ## Asset Loading & Error Handling
+
+### Two-Stage Loading Pattern
+For optimal UX, show loading UI immediately before loading bulk assets.
+
+**Pattern: LoadingScene with instant progress bar**
+
+```javascript
+// Stage 1: preload() - Load ONLY loading UI assets
+preload() {
+  this.loadStartTime = Date.now();
+
+  // Only progress bar assets in initial preload
+  this.load.image('slider_bg', '/assets/Components/Slider/Slider_Basic01_Bg.Png');
+  this.load.image('slider_fill_magenta', '/assets/Components/Slider/Slider_Basic01_Fill_Magenta.Png');
+
+  this.load.on('loaderror', (file) => console.warn(`Failed to load: ${file.key}`));
+}
+
+// Stage 2: create() - Show UI, then load everything else
+async create() {
+  await document.fonts.load('32px "Tilt Warp"'); // Wait for fonts
+
+  this.createLoadingUI(); // Progress bar appears immediately
+
+  // Now load all game assets with visible progress
+  this.loadGameAssets();
+}
+
+loadGameAssets() {
+  // Secondary loader for bulk assets
+  const loader = new Phaser.Loader.LoaderPlugin(this);
+
+  // Real-time progress updates
+  loader.on('progress', (value) => {
+    this.loadingSlider.setProgress(value, false);
+  });
+
+  loader.on('complete', () => {
+    this.scene.start('MainScene');
+  });
+
+  // Load all game assets
+  loader.image('background', '/assets/background.png');
+  loader.image('sprite1', '/assets/sprite1.png');
+  // ... all other assets
+
+  loader.start(); // Begin loading
+}
+```
+
+**Why two-stage loading:**
+- Progress bar appears instantly (only 2 small images to load first)
+- User sees real loading progress, not a blank screen
+- Better perceived performance and user experience
+- Progress accurately reflects actual asset loading
+
+### Basic Asset Loading
 
 ```javascript
 // Assets load from public/assets/

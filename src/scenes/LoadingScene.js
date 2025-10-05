@@ -7,51 +7,16 @@ export default class LoadingScene extends Phaser.Scene {
   }
 
   preload() {
-    // Store progress value and start time
-    this.loadProgress = 0;
+    // Store start time
     this.loadStartTime = Date.now();
 
     // Skip artificial delays on localhost for faster development
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     this.minLoadTime = isLocalhost ? 0 : 1500; // Minimum 1.5 seconds in production only
-    this.animDuration = isLocalhost ? 100 : 1000; // Fast animation on localhost
 
-    // Load only the loading screen assets first
+    // ONLY load the progress bar assets in preload
     this.load.image('slider_bg', '/assets/Components/Slider/Slider_Basic01_Bg.Png');
     this.load.image('slider_fill_magenta', '/assets/Components/Slider/Slider_Basic01_Fill_Magenta.Png');
-
-    // Load all game assets together
-    this.load.image('background', '/assets/Demo/Demo_Background/Background01.png');
-    this.load.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
-
-    // Load treasure chest animation frames (every other frame: 1, 3, 5, ... 59)
-    // This reduces 60 frames to 30 frames, cutting 4s animation to ~1.5s at 20fps
-    for (let i = 1; i <= 38; i += 2) {
-      const frameNum = String(i).padStart(4, '0');
-      this.load.image(`chest_${frameNum}`, `/assets/sprites/open treasure/frame_${frameNum}.webp`);
-    }
-
-    // Status bar assets
-    this.load.image('statusbar_bg', '/assets/Components/UI_Etc/Statusbar_Demo_Bg.Png');
-    this.load.image('statusbar_bg_small', '/assets/Components/UI_Etc/Statusbar_Demo_Bg Small.png');
-    this.load.image('statusbar_coin', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Coin.Png');
-    this.load.image('statusbar_energy', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Energy.Png');
-    this.load.image('statusbar_gem', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Gem.Png');
-    this.load.image('avatar_frame', '/assets/Components/Frame/BasicFrame_CircleSolid01_White.png');
-    this.load.image('avatar_default', '/assets/Components/IconMisc/Icon_Body.png');
-    this.load.image('settings_icon', '/assets/Components/IconMisc/Icon_Setting01.Png');
-
-    // Pill-shaped container assets for individual resource displays
-    this.load.image('label_oval_demo', '/assets/Components/Label/Label_Oval02_Demo.png');
-    this.load.image('label_oval_white', '/assets/Components/Label/Label_Oval02_White.png');
-
-    // Sounds
-    this.load.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
-
-    // Track loading progress
-    this.load.on('progress', (value) => {
-      this.loadProgress = value;
-    });
 
     // Handle loading errors gracefully
     this.load.on('loaderror', (file) => {
@@ -66,34 +31,62 @@ export default class LoadingScene extends Phaser.Scene {
       document.fonts.load('24px "LINESeed"')
     ]);
 
+    // Create the loading UI immediately
     this.createLoadingUI();
 
-    // Simulate progressive loading animation over 1 second
-    this.animateProgress();
+    // Now load all the game assets with visible progress
+    this.loadGameAssets();
   }
 
-  animateProgress() {
-    // Animate from 0 to 100% (fast on localhost, slower in production)
-    this.tweens.add({
-      targets: { value: 0 },
-      value: 1,
-      duration: this.animDuration,
-      ease: 'Power2',
-      onUpdate: (tween) => {
-        const progress = tween.getValue();
-        this.loadingSlider.setProgress(progress, false);
-      },
-      onComplete: () => {
-        // Check if minimum load time has passed
-        const elapsed = Date.now() - this.loadStartTime;
-        const remaining = Math.max(0, this.minLoadTime - elapsed);
+  loadGameAssets() {
+    // Create a new loader for the remaining assets
+    const loader = new Phaser.Loader.LoaderPlugin(this);
 
-        // Wait for remaining time before transitioning
-        this.time.delayedCall(remaining, () => {
-          this.scene.start('MainScene');
-        });
-      }
+    // Track progress
+    loader.on('progress', (value) => {
+      this.loadingSlider.setProgress(value, false);
     });
+
+    loader.on('complete', () => {
+      // Check if minimum load time has passed
+      const elapsed = Date.now() - this.loadStartTime;
+      const remaining = Math.max(0, this.minLoadTime - elapsed);
+
+      // Wait for remaining time before transitioning
+      this.time.delayedCall(remaining, () => {
+        this.scene.start('MainScene');
+      });
+    });
+
+    // Load all game assets
+    loader.image('background', '/assets/Demo/Demo_Background/Background01.png');
+    loader.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
+
+    // Load treasure chest animation frames (every other frame: 1, 3, 5, ... 37)
+    for (let i = 1; i <= 38; i += 2) {
+      const frameNum = String(i).padStart(4, '0');
+      loader.image(`chest_${frameNum}`, `/assets/sprites/open treasure/frame_${frameNum}.webp`);
+    }
+
+    // Status bar assets
+    loader.image('statusbar_bg', '/assets/Components/UI_Etc/Statusbar_Demo_Bg.Png');
+    loader.image('statusbar_bg_small', '/assets/Components/UI_Etc/Statusbar_Demo_Bg Small.png');
+    loader.image('statusbar_coin', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Coin.Png');
+    loader.image('statusbar_energy', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Energy.Png');
+    loader.image('statusbar_gem', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Gem.Png');
+    loader.image('avatar_frame', '/assets/Components/Frame/BasicFrame_CircleSolid01_White.png');
+    loader.image('avatar_default', '/assets/Components/IconMisc/Icon_Body.png');
+    loader.image('settings_icon', '/assets/Components/IconMisc/Icon_Setting01.Png');
+
+    // Pill-shaped container assets
+    loader.image('label_oval_demo', '/assets/Components/Label/Label_Oval02_Demo.png');
+    loader.image('label_oval_white', '/assets/Components/Label/Label_Oval02_White.png');
+
+    // Sounds
+    loader.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
+
+    // Start loading
+    loader.start();
   }
 
   createLoadingUI() {
@@ -139,8 +132,8 @@ export default class LoadingScene extends Phaser.Scene {
 
     this.add.existing(this.loadingSlider);
 
-    // Set initial progress from preload
-    this.loadingSlider.setProgress(this.loadProgress, false);
+    // Set initial progress to 0
+    this.loadingSlider.setProgress(0, false);
 
     // Loading text below progress bar
     this.loadingText = this.add.text(centerX, centerY + 80, 'LOADING...', {
