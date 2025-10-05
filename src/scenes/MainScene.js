@@ -76,8 +76,45 @@ export default class MainScene extends Phaser.Scene {
 
     // Create treasure chest sprite (starts with first frame)
     if (this.textures.exists('chest_0001')) {
-      this.player = this.add.sprite(centerX, centerY - 0, 'chest_0001');
-      this.player.setScale(0.75);
+      this.player = this.add.sprite(centerX, centerY + 80, 'chest_0001');
+      this.player.setScale(0.85);
+
+      // Make chest interactive
+      this.player.setInteractive({ useHandCursor: true });
+
+      // Add hover effect
+      this.player.on('pointerover', () => {
+        this.player.setTint(0xffddaa); // Slight golden tint on hover
+      });
+
+      this.player.on('pointerout', () => {
+        this.player.clearTint();
+      });
+
+      // Press down effect
+      this.player.on('pointerdown', () => {
+        this.tweens.add({
+          targets: this.player,
+          scaleX: 0.72,
+          scaleY: 0.72,
+          duration: 100,
+          ease: 'Power2'
+        });
+
+        this.openChest();
+      });
+
+      // Release effect
+      this.player.on('pointerup', () => {
+        this.tweens.add({
+          targets: this.player,
+          scaleX: 0.75,
+          scaleY: 0.75,
+          duration: 100,
+          ease: 'Back.out'
+        });
+      });
+
     } else {
       // Fallback: create a simple circle if image doesn't load
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
@@ -102,10 +139,7 @@ export default class MainScene extends Phaser.Scene {
       wordWrap: { width: 400 }
     }).setOrigin(0.5);
 
-    // Create "Connect TON Wallet" button
-    this.createConnectButton();
-
-    // Initialize TON Connect
+    // Initialize TON Connect (button removed - chest is now interactive)
     this.initTonConnect();
   }
 
@@ -199,88 +233,6 @@ export default class MainScene extends Phaser.Scene {
 
     // Return true for development, but always verify on backend in production
     return true;
-  }
-
-  createConnectButton() {
-    const centerX = this.cameras.main.width / 2;
-    const buttonY = this.cameras.main.height - 150;
-
-    // Store original position for press animation
-    this.buttonOriginalY = buttonY;
-
-    // Button background using NineSlice to preserve rounded corners
-    // Button asset is approximately 200x68px with rounded corners (~20px radius)
-    this.connectButton = this.add.nineslice(
-      centerX, buttonY,
-      'btn_green',
-      null,
-      280, 80, // Width and height
-      20, 20, 20, 20 // Left, right, top, bottom slices to preserve corners
-    ).setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    // Button text overlay
-    this.connectButtonText = this.add.text(centerX, buttonY, 'Tap to Open', {
-      fontFamily: 'Tilt Warp',
-      fill: '#fff',
-      fontStyle: 'bold',
-      letterSpacing: 2.5,
-      // stroke: '#000000',
-      // strokeThickness: 3,
-      padding: { x: 10, y: 10 },
-      resolution: 3
-    }).setOrigin(0.5).setFontSize(30).setStroke('#000000', 4);
-
-    // Button hover effects
-    this.connectButton.on('pointerover', () => {
-      this.connectButton.setTint(0xddffdd); // Lighter green tint on hover
-    });
-
-    this.connectButton.on('pointerout', () => {
-      this.connectButton.clearTint(); // Remove tint
-    });
-
-    // Button press down effect
-    this.connectButton.on('pointerdown', () => {
-      // Animate button press (scale down, move down, darker tint)
-      this.tweens.add({
-        targets: [this.connectButton, this.connectButtonText],
-        scaleX: 0.95,
-        scaleY: 0.95,
-        y: this.buttonOriginalY + 4,
-        duration: 100,
-        ease: 'Power2'
-      });
-      this.connectButton.setTint(0x88cc88); // Darker green when pressed
-
-      this.openChest();
-    });
-
-    // Button release effect (restore original state)
-    this.connectButton.on('pointerup', () => {
-      this.tweens.add({
-        targets: [this.connectButton, this.connectButtonText],
-        scaleX: 1.0,
-        scaleY: 1.0,
-        y: this.buttonOriginalY,
-        duration: 100,
-        ease: 'Back.out'
-      });
-      this.connectButton.clearTint();
-    });
-
-    // Also restore on pointerout (in case user drags off button)
-    this.connectButton.on('pointerout', () => {
-      this.tweens.add({
-        targets: [this.connectButton, this.connectButtonText],
-        scaleX: 1.0,
-        scaleY: 1.0,
-        y: this.buttonOriginalY,
-        duration: 100,
-        ease: 'Back.out'
-      });
-      this.connectButton.clearTint();
-    });
   }
 
   async initTonConnect() {
@@ -399,20 +351,6 @@ export default class MainScene extends Phaser.Scene {
     }
   }
 
-  async connectWallet() {
-    try {
-      this.connectButtonText.setText('Connecting...');
-
-      // Open TON Connect modal
-      await this.tonConnectUI.openModal();
-
-    } catch (error) {
-      console.error('Wallet connection failed:', error);
-      this.showError('Failed to connect wallet: ' + error.message);
-      this.connectButtonText.setText('Connect TON Wallet');
-    }
-  }
-
   async onWalletConnected(wallet) {
     try {
       // Get wallet address
@@ -420,10 +358,7 @@ export default class MainScene extends Phaser.Scene {
 
       console.log('Wallet connected:', this.walletAddress);
 
-      // Update UI
-      this.connectButton.setTint(0x88ffaa); // Bright green tint for connected state
-      this.connectButtonText.setText('Wallet Connected');
-
+      // Update UI - show wallet address
       const shortAddress = this.walletAddress.slice(0, 6) + '...' + this.walletAddress.slice(-4);
       this.walletText.setText(`Wallet: ${shortAddress}`);
 
@@ -438,8 +373,6 @@ export default class MainScene extends Phaser.Scene {
 
   onWalletDisconnected() {
     this.walletAddress = null;
-    this.connectButton.clearTint(); // Reset to original green color
-    this.connectButtonText.setText('Connect TON Wallet');
     this.walletText.setText('');
     console.log('Wallet disconnected');
   }
