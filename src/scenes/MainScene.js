@@ -42,7 +42,7 @@ export default class MainScene extends Phaser.Scene {
     this.anims.create({
       key: 'chest_open',
       frames: frames,
-      frameRate: 30, // 19 frames at 30fps = ~0.6 seconds
+      frameRate: 38, // 19 frames at 30fps = ~0.6 seconds
       repeat: 0 // Play once
     });
   }
