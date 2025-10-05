@@ -42,7 +42,7 @@ export default class MainScene extends Phaser.Scene {
     this.anims.create({
       key: 'chest_open',
       frames: frames,
-      frameRate: 38, // 19 frames at 30fps = ~0.6 seconds
+      frameRate: 38, // 38 frames at 38fps = ~1 seconds
       repeat: 0 // Play once
     });
 
@@ -329,12 +329,12 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // Play closing animation after opening completes
-    this.time.delayedCall(700, () => {
+    this.time.delayedCall(500, () => {
       this.player.play('chest_close');
     });
 
     // Reset button text after animation completes
-    this.time.delayedCall(1000, () => {
+    this.time.delayedCall(300, () => {
       this.connectButtonText.setText('Tap to Open');
     });
   }
