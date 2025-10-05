@@ -313,7 +313,7 @@ export default class MainScene extends Phaser.Scene {
     this.sound.play('chest_sound');
 
     // Visual feedback
-    this.connectButtonText.setText('Opening...');
+    //this.connectButtonText.setText('Opening...');
 
     // Restart chest opening animation (restarts if already playing)
     this.player.play('chest_open', true);
@@ -329,9 +329,9 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // Reset button text after animation completes
-    this.time.delayedCall(300, () => {
-      this.connectButtonText.setText('Tap to Open');
-    });
+    // this.time.delayedCall(300, () => {
+    //   this.connectButtonText.setText('Tap to Open');
+    // });
   }
 
   createCoinConfetti() {
