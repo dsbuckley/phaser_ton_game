@@ -38,12 +38,20 @@ export default class MainScene extends Phaser.Scene {
       frames.push({ key: `chest_${frameNum}` });
     }
 
-    // Create the animation
+    // Create opening animation
     this.anims.create({
       key: 'chest_open',
       frames: frames,
       frameRate: 38, // 19 frames at 30fps = ~0.6 seconds
       repeat: 0 // Play once
+    });
+
+    // Create closing animation (reverse order)
+    this.anims.create({
+      key: 'chest_close',
+      frames: frames.slice().reverse(),
+      frameRate: 38,
+      repeat: 0
     });
   }
 
@@ -320,14 +328,14 @@ export default class MainScene extends Phaser.Scene {
       this.createCoinConfetti();
     });
 
-    // Reset button text after animation completes (1.5 seconds)
-    this.time.delayedCall(1000, () => {
-      this.connectButtonText.setText('Tap to Open');
+    // Play closing animation after opening completes
+    this.time.delayedCall(700, () => {
+      this.player.play('chest_close');
     });
 
-    // Reset chest to first frame after a short delay
+    // Reset button text after animation completes
     this.time.delayedCall(1000, () => {
-      this.player.setTexture('chest_0001');
+      this.connectButtonText.setText('Tap to Open');
     });
   }
 
