@@ -76,7 +76,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create treasure chest sprite (starts with first frame)
     if (this.textures.exists('chest_0001')) {
-      this.player = this.add.sprite(centerX, centerY + 80, 'chest_0001');
+      this.player = this.add.sprite(centerX + 10, centerY + 80, 'chest_0001');
       this.player.setScale(0.85);
 
       // Make chest interactive
