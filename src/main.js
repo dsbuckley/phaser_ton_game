@@ -1,4 +1,4 @@
-import '@fontsource/tilt-warp';
+// import '@fontsource/tilt-warp'; // Temporarily disabled for deployment testing
 import Phaser from 'phaser';
 import LoadingScene from './scenes/LoadingScene.js';
 import MainScene from './scenes/MainScene.js';
