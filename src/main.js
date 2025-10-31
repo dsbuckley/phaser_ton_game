@@ -1,3 +1,4 @@
+import '@fontsource/tilt-warp';
 import Phaser from 'phaser';
 import LoadingScene from './scenes/LoadingScene.js';
 import MainScene from './scenes/MainScene.js';
