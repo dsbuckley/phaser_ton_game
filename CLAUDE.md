@@ -161,14 +161,23 @@ button.on('pointerout', () => button.clearTint());
 ## Fonts & Text Rendering
 
 ### Font Usage Convention
-Two custom fonts loaded via CDN in `index.html`:
+Two custom fonts self-hosted in `public/assets/fonts/` with @font-face declarations in `index.html`:
 
 **1. Tilt Warp** - `fontFamily: 'Tilt Warp'`
 - Playful display font for titles, headers, achievements, flashy UI
+- File: `TiltWarp-Regular.ttf` (65KB, downloaded from Google Fonts)
+- Source: https://fonts.google.com/specimen/Tilt+Warp
 
 **2. LINESeed** - `fontFamily: 'LINESeed'`
 - Clean sans-serif for body text, UI labels, stats, messages, tooltips
 - Multi-language support (EN, JP, KR, TH, ZH)
+- Files: `LINESeedSans_A_Rg.ttf` (Regular, 400 weight), `LINESeedSans_A_Bd.ttf` (Bold, 700 weight)
+
+**Self-Hosted Benefits:**
+- No external CDN dependencies or tracking
+- Faster loading (same domain, no DNS lookup)
+- Works offline
+- Consistent with Vite's public directory pattern
 
 **ALWAYS specify fontFamily** - never rely on browser defaults
 
