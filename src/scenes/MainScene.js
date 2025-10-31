@@ -117,10 +117,28 @@ export default class MainScene extends Phaser.Scene {
       });
 
       // Create "Tap Me" text above the chest
+      // this.tapMeText = this.add.text(centerX, centerY + 100, 'Tap Me', {
+      //   fontFamily: 'Tilt Warp',
+      //   fontSize: '30px',
+      //   fill: '#FFFFFF',
+      //   stroke: '#000000',
+      //   strokeThickness: 3,
+      //   padding: { x: 20, y: 20 },
+      //   shadow: {
+      //     offsetX: 3,
+      //     offsetY: 3,
+      //     color: '#000000',
+      //     blur: 0,
+      //     stroke: false,
+      //     fill: true
+      //   },
+      //   resolution: 2
+      // }).setOrigin(0.5);
+
       this.tapMeText = this.add.text(centerX, centerY + 100, 'Tap Me', {
         fontFamily: 'Tilt Warp',
-        fontSize: '30px',
-        fill: '#FFFFFF',
+        fontSize: 30,
+        color: '#FFFFFF',
         stroke: '#000000',
         strokeThickness: 3,
         padding: { x: 20, y: 20 },
@@ -132,8 +150,9 @@ export default class MainScene extends Phaser.Scene {
           stroke: false,
           fill: true
         },
-        resolution: 2
+        resolution: window.devicePixelRatio // key change
       }).setOrigin(0.5);
+
 
       // Create pulsing animation
       this.tweens.add({

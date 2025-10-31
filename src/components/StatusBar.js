@@ -91,13 +91,14 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     // Level text below avatar - smaller font
     this.levelText = this.scene.add.text(avatarX, avatarY + 24, `${this.config.userLevel} LVL`, {
       fontFamily: 'LINESeed',
-      fontSize: '9px', // Smaller level text
-      fill: '#ffffff',
+      fontSize: 14,               // use a number, not a string
+      color: '#ffffff',          // Phaser’s preferred key
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 2,
-      resolution: 2
+      strokeThickness: 4,
+      resolution: window.devicePixelRatio // key for clarity
     }).setOrigin(0.5);
+
     this.add(this.levelText);
   }
 
@@ -180,7 +181,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       // Fallback: draw rounded rectangle
       const graphics = this.scene.add.graphics();
       graphics.fillStyle(0x000000, 0.9);
-      graphics.fillRoundedRect(x, y - height/2, width, height, height/2); // Pill shape
+      graphics.fillRoundedRect(x, y - height / 2, width, height, height / 2); // Pill shape
       pillBg = graphics;
     }
     this.add(pillBg);
@@ -196,7 +197,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       icon.setDisplaySize(iconSize, iconSize);
     } else {
       // Fallback: colored circle
-      icon = this.scene.add.circle(iconX, iconY, iconSize/2, 0xf39c12);
+      icon = this.scene.add.circle(iconX, iconY, iconSize / 2, 0xf39c12);
     }
     this.add(icon);
 
@@ -206,12 +207,12 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     const valueText = this.scene.add.text(textX, textY, this.formatNumber(value), {
       fontFamily: 'LINESeed',
-      fontSize: '14px', // Smaller font for compact layout
-      fill: '#ffffff',
+      fontSize: 14, // Smaller font for compact layout
+      color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 2,
-      resolution: 2
+      resolution: window.devicePixelRatio
     }).setOrigin(0, 0.5); // Left-align text
     this.add(valueText);
 
