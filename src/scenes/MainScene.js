@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TonConnectUI } from '@tonconnect/ui';
 import { createClient } from '@supabase/supabase-js';
+import { withPersistentState } from '../utils/persistentState.js';
 import StatusBar from '../components/StatusBar.js';
 
 export default class MainScene extends Phaser.Scene {
@@ -12,10 +13,13 @@ export default class MainScene extends Phaser.Scene {
     this.walletAddress = null;
     this.audioUnlocked = false;
     this.firstClick = false;
-    this.totalCoins = 0; // Track total coins collected
   }
 
   create() {
+    // Initialize persistent coin state using phaser-hooks
+    // This will automatically save to localStorage and persist across sessions
+    this.coinsState = withPersistentState(this, 'totalCoins', 0);
+
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
@@ -202,12 +206,13 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Create status bar with initial values - positioned at very top
+    // Load persisted coin count from localStorage via phaser-hooks
     this.statusBar = new StatusBar(this, 0, 30, {
       avatarTexture: 'avatar_default',
       avatarUrl: avatarUrl,
       userLevel: 4, // TODO: Get from user data/database
       resources: [
-        { key: 'coins', icon: 'statusbar_coin', value: 0 },
+        { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get() },
         { key: 'energy', icon: 'statusbar_energy', value: 37720 }, // Example: 37.72K
         { key: 'gems', icon: 'statusbar_gem', value: 0 }
       ],
@@ -418,9 +423,14 @@ export default class MainScene extends Phaser.Scene {
       });
     }
 
-    // Update total coins and StatusBar with animation
-    this.totalCoins += coinAmount;
-    this.statusBar.setResource('coins', this.totalCoins, true);
+    // Update total coins using phaser-hooks persistent state
+    // This automatically saves to localStorage
+    const currentCoins = this.coinsState.get();
+    const newTotal = currentCoins + coinAmount;
+    this.coinsState.set(newTotal);
+
+    // Update StatusBar with animation
+    this.statusBar.setResource('coins', newTotal, true);
   }
 
   async onWalletConnected(wallet) {
