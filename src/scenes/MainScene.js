@@ -12,6 +12,7 @@ export default class MainScene extends Phaser.Scene {
     this.walletAddress = null;
     this.audioUnlocked = false;
     this.firstClick = false;
+    this.totalCoins = 0; // Track total coins collected
   }
 
   create() {
@@ -346,9 +347,12 @@ export default class MainScene extends Phaser.Scene {
     // Restart chest opening animation (restarts if already playing)
     this.player.play('chest_open', true);
 
-    // Trigger coin confetti after 300ms delay
+    // Generate random coin reward (10-50 coins per click)
+    const coinReward = Phaser.Math.Between(10, 50);
+
+    // Trigger coin confetti after 300ms delay with the coin reward amount
     this.time.delayedCall(300, () => {
-      this.createCoinConfetti();
+      this.createCoinConfetti(coinReward);
     });
 
     // Play closing animation after opening completes
@@ -362,13 +366,13 @@ export default class MainScene extends Phaser.Scene {
     // });
   }
 
-  createCoinConfetti() {
+  createCoinConfetti(coinAmount) {
     // Get chest position
     const chestX = this.player.x;
     const chestY = this.player.y;
 
-    // Create 15-20 coins bursting from chest
-    const coinCount = Phaser.Math.Between(15, 20);
+    // Create exact number of coins matching the reward amount
+    const coinCount = coinAmount;
 
     for (let i = 0; i < coinCount; i++) {
       // Create coin sprite
@@ -413,6 +417,10 @@ export default class MainScene extends Phaser.Scene {
         });
       });
     }
+
+    // Update total coins and StatusBar with animation
+    this.totalCoins += coinAmount;
+    this.statusBar.setResource('coins', this.totalCoins, true);
   }
 
   async onWalletConnected(wallet) {
