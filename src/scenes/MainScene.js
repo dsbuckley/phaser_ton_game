@@ -353,7 +353,7 @@ export default class MainScene extends Phaser.Scene {
     this.player.play('chest_open', true);
 
     // Generate random coin reward (10-50 coins per click)
-    const coinReward = Phaser.Math.Between(10, 50);
+    const coinReward = Phaser.Math.Between(5, 25);
 
     // Trigger coin confetti after 300ms delay with the coin reward amount
     this.time.delayedCall(300, () => {

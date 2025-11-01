@@ -552,3 +552,84 @@ this.load.on('loaderror', (file) => {
   // Create fallback graphics
 });
 ```
+
+## State Management
+
+### Custom Persistent State Utility
+**Location:** `src/utils/persistentState.js`
+
+A lightweight, localStorage-backed state management system with automatic persistence and modern Phaser events API (no deprecation warnings).
+
+**Pattern: Basic usage with object API**
+
+```javascript
+import { withPersistentState } from '../utils/persistentState.js';
+
+// In scene create()
+this.coinsState = withPersistentState(this, 'totalCoins', 0);
+
+// Get current value
+const coins = this.coinsState.get();
+
+// Set new value (automatically saves to localStorage)
+this.coinsState.set(coins + 50);
+
+// Reset to default value
+this.coinsState.reset();
+```
+
+**Pattern: React-style tuple API (optional)**
+
+```javascript
+import { usePersistentState } from '../utils/persistentState.js';
+
+// In scene create()
+const [getCoins, setCoins] = usePersistentState(this, 'totalCoins', 0);
+
+// Get and set
+const current = getCoins();
+setCoins(current + 50);
+```
+
+**Features:**
+- ✅ **Automatic persistence** - Syncs to localStorage on every `set()`
+- ✅ **Scene lifecycle aware** - Cleans up on scene destroy
+- ✅ **Modern Phaser API** - Uses `scene.events.emit()` (no deprecation warnings)
+- ✅ **Type-safe** - Works with any JSON-serializable value
+- ✅ **Debug mode** - Pass `{ debug: true }` for console logging
+- ✅ **Event emitter** - Emits `'persistentstate:change'` events
+
+**Example: Coin counting with persistence**
+
+```javascript
+// Initialize in create()
+this.coinsState = withPersistentState(this, 'totalCoins', 0);
+
+// Load saved value into StatusBar
+this.statusBar = new StatusBar(this, 0, 30, {
+  resources: [
+    { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get() }
+  ]
+});
+
+// Update coins on chest click
+openChest() {
+  const reward = Phaser.Math.Between(10, 50);
+  const newTotal = this.coinsState.get() + reward;
+  this.coinsState.set(newTotal); // Automatically saved to localStorage
+  this.statusBar.setResource('coins', newTotal, true);
+}
+```
+
+**Why use this instead of phaser-hooks library:**
+- No external dependencies
+- No deprecation warnings
+- Smaller bundle size
+- Full control over implementation
+- Better error handling with try/catch blocks
+
+**Implementation Details:**
+- Uses `JSON.stringify/parse` for storage serialization
+- Automatically handles scene cleanup via `shutdown` and `destroy` events
+- Gracefully handles localStorage errors (quota exceeded, private browsing, etc.)
+- State persists across browser refreshes and sessions
