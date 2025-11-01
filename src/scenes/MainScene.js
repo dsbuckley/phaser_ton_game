@@ -212,9 +212,9 @@ export default class MainScene extends Phaser.Scene {
       avatarUrl: avatarUrl,
       userLevel: 4, // TODO: Get from user data/database
       resources: [
-        { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get() },
-        { key: 'energy', icon: 'statusbar_energy', value: 37720 }, // Example: 37.72K
-        { key: 'gems', icon: 'statusbar_gem', value: 0 }
+        { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get(), width: 95 },
+        { key: 'tickets', icon: 'statusbar_ticket', value: 0, width: 65 },
+        { key: 'gems', icon: 'statusbar_gem', value: 0, width: 65 }
       ],
       onSettingsClick: () => {
         console.log('Settings button clicked');

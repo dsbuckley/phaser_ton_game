@@ -107,21 +107,23 @@ export default class StatusBar extends Phaser.GameObjects.Container {
    * Returns positioning info for each resource pill
    */
   calculatePillLayout() {
-    const resourceCount = this.config.resources.length;
     const startX = 70; // Start after avatar
     const availableWidth = this.scene.cameras.main.width - 140; // Space between avatar and settings
 
     // Pill dimensions - compact to match reference catalog
-    const pillWidth = 75; // Further reduced for tighter fit
     const pillGap = 15; // Tighter gap for compact layout
 
-    // Calculate total width needed and centering offset
-    const totalPillsWidth = (pillWidth * resourceCount) + (pillGap * (resourceCount - 1));
+    // Calculate total width needed (sum of all pill widths + gaps)
+    const totalPillsWidth = this.config.resources.reduce((sum, resource, index) => {
+      const pillWidth = resource.width || 75; // Default to 75 if not specified
+      const gap = index > 0 ? pillGap : 0; // No gap before first pill
+      return sum + gap + pillWidth;
+    }, 0);
+
     const centerOffset = (availableWidth - totalPillsWidth) / 2;
 
     return {
       startX: startX + centerOffset,
-      pillWidth,
       pillGap,
       pillHeight: 40 // Adjusted to work better with 60px tall asset (avoid excessive squashing)
     };
@@ -134,16 +136,17 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const layout = this.calculatePillLayout();
     this.resourceDisplays = [];
 
+    let currentX = layout.startX + 10; // Start position with 10px shift right
+
     this.config.resources.forEach((resource, index) => {
-      // Calculate X position for this pill
-      const pillX = layout.startX + (index * (layout.pillWidth + layout.pillGap)) + 10; // Shift all pills 5px right
+      const pillWidth = resource.width || 75; // Use custom width or default to 75
       const pillY = 0;
 
       // Create pill-shaped background container
       const pill = this.createResourcePill(
-        pillX,
+        currentX,
         pillY,
-        layout.pillWidth,
+        pillWidth,
         layout.pillHeight,
         resource.icon,
         resource.value,
@@ -151,6 +154,9 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       );
 
       this.resourceDisplays.push(pill);
+
+      // Move to next position (current pill width + gap)
+      currentX += pillWidth + layout.pillGap;
     });
   }
 

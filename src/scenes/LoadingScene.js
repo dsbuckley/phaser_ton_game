@@ -74,6 +74,7 @@ export default class LoadingScene extends Phaser.Scene {
     loader.image('statusbar_coin', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Coin.Png');
     loader.image('statusbar_energy', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Energy.Png');
     loader.image('statusbar_gem', '/assets/Components/UI_Etc/Statusbar_Demo_Icon_Gem.Png');
+    loader.image('statusbar_ticket', '/assets/Components/Icon_ItemIcons/Original/Itemicon_Ticket_Blue.Png');
     loader.image('avatar_frame', '/assets/Components/Frame/BasicFrame_CircleSolid01_White.png');
     loader.image('avatar_default', '/assets/Components/IconMisc/Icon_Body.png');
     loader.image('settings_icon', '/assets/Components/IconMisc/Icon_Setting01.Png');
