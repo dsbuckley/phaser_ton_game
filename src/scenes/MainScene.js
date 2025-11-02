@@ -29,8 +29,8 @@ export default class MainScene extends Phaser.Scene {
     // Initialize timestamp tracking for offline regeneration
     this.lastBatteryUpdateTime = withPersistentState(this, 'lastBatteryUpdateTime', Date.now());
 
-    // Calculate and apply offline energy regeneration
-    this.applyOfflineRegeneration();
+    // Calculate offline energy regeneration (will show notification after UI is created)
+    this.offlineEnergyGained = this.calculateOfflineRegeneration();
 
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
@@ -48,11 +48,16 @@ export default class MainScene extends Phaser.Scene {
     // Create UI (assets and fonts already loaded by LoadingScene)
     this.createUI();
 
+    // Show offline regeneration notification if energy was gained
+    if (this.offlineEnergyGained > 0) {
+      this.showOfflineRegenNotification(this.offlineEnergyGained);
+    }
+
     // Start battery regeneration timer
     this.startBatteryRegeneration();
   }
 
-  applyOfflineRegeneration() {
+  calculateOfflineRegeneration() {
     const currentTime = Date.now();
     const lastUpdateTime = this.lastBatteryUpdateTime.get();
     const currentBattery = this.batteryState.get();
@@ -68,6 +73,7 @@ export default class MainScene extends Phaser.Scene {
       if (energyGained > 0) {
         // Calculate new battery value (clamped to max 100)
         const newBattery = Math.min(currentBattery + energyGained, 100);
+        const actualGained = newBattery - currentBattery;
 
         // Update battery state
         this.batteryState.set(newBattery);
@@ -75,12 +81,90 @@ export default class MainScene extends Phaser.Scene {
 
         // Log offline regeneration for debugging
         const minutesElapsed = Math.floor(elapsedSeconds / 60);
-        console.log(`Offline regeneration: +${energyGained} energy (${minutesElapsed} minutes offline)`);
+        console.log(`Offline regeneration: +${actualGained} energy (${minutesElapsed} minutes offline)`);
+
+        return actualGained;
       }
     } else {
       // Still update timestamp even if no regeneration occurred
       this.lastBatteryUpdateTime.set(currentTime);
     }
+
+    return 0;
+  }
+
+  showOfflineRegenNotification(energyGained) {
+    const centerX = this.cameras.main.width / 2;
+    const startY = 150; // Start below battery bar
+
+    // Create notification container with background
+    const notification = this.add.container(centerX, startY);
+
+    // Create background pill (similar to StatusBar style)
+    const bgWidth = 280;
+    const bgHeight = 60;
+    const bg = this.add.nineslice(
+      0, 0,
+      'statusbar_bg_small',
+      null,
+      bgWidth, bgHeight,
+      11, 11, 15, 15
+    );
+    bg.setOrigin(0.5);
+
+    // Create battery icon
+    const icon = this.add.image(-100, -5, 'battery_icon');
+    icon.setScale(0.25); // Much smaller icon
+
+    // Create main text
+    const mainText = this.add.text(10, -8, `+${energyGained} Energy`, {
+      fontFamily: 'Tilt Warp',
+      fontSize: '22px',
+      fill: '#4ADE80', // Green color for positive gain
+      stroke: '#000000',
+      strokeThickness: 4,
+      padding: { x: 10, y: 10 },
+      resolution: 2
+    }).setOrigin(0.5);
+
+    // Create subtitle text
+    const subtitleText = this.add.text(10, 12, 'while you were away', {
+      fontFamily: 'LINESeed',
+      fontSize: '14px',
+      fill: '#FFFFFF',
+      stroke: '#000000',
+      strokeThickness: 3,
+      padding: { x: 5, y: 5 },
+      resolution: 2
+    }).setOrigin(0.5);
+
+    // Add elements to container
+    notification.add([bg, icon, mainText, subtitleText]);
+    notification.setAlpha(0);
+    notification.setDepth(2000); // Above everything
+
+    // Animate: Fade in, slide down, pause, fade out
+    this.tweens.add({
+      targets: notification,
+      alpha: 1,
+      y: startY + 30,
+      duration: 400,
+      ease: 'Back.out',
+      onComplete: () => {
+        // Hold for 2 seconds
+        this.time.delayedCall(2000, () => {
+          // Fade out
+          this.tweens.add({
+            targets: notification,
+            alpha: 0,
+            y: startY + 50,
+            duration: 400,
+            ease: 'Power2',
+            onComplete: () => notification.destroy()
+          });
+        });
+      }
+    });
   }
 
   startBatteryRegeneration() {
