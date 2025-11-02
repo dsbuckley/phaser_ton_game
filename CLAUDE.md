@@ -128,6 +128,94 @@ statusBar.setLevel(5);
 **Spacing Tuning:** 15px gap provides optimal balance between compactness and readability
 **Methods:** `setResource()`, `getResource()`, `setLevel()`, `formatNumber()`, `loadTelegramPhoto()`
 
+### BatteryBar (`src/components/BatteryBar.js`)
+Energy/stamina bar with battery icon, auto-regeneration, and persistent state.
+
+```javascript
+// Initialize persistent state in create()
+this.batteryState = withPersistentState(this, 'batteryEnergy', 100);
+
+// Create battery bar
+const batteryBar = new BatteryBar(scene, x, y, {
+  width: 350,
+  height: 30,
+  iconTexture: 'battery_icon',
+  fillTexture: 'slider_fill_green',
+  bgTexture: 'slider_bg',
+  currentValue: this.batteryState.get(),
+  maxValue: 100,
+  iconSize: 45,
+  iconOffsetX: -10,
+  showText: false // Hide numbers overlay
+});
+scene.add.existing(batteryBar);
+batteryBar.setScrollFactor(0).setDepth(999);
+
+// Update battery (with animation)
+batteryBar.setBattery(75, 100, true);
+
+// Get current values
+const values = batteryBar.getBatteryValues();
+// { current: 75, max: 100, progress: 0.75 }
+```
+
+**Architecture:** Container-based component with NineSlice bars, battery icon, optional text, and GeometryMask for fill reveal
+**Asset Requirements:**
+- Background: `Slider_Basic01_Bg.Png` (26×68px)
+- Fill: `Slider_Basic01_Fill_Green.Png` (18×60px)
+- Icon: `ItemIcon_Battery.png` (512×512px)
+**NineSlice Values:** Background (13,13,17,17), Fill (9,9,15,15) - optimized for thin bars (30-40px height)
+**Icon Positioning:** Uses `iconOffsetX` to overlap left edge of bar (negative values move left)
+**Methods:** `setBattery(current, max, animate)`, `setProgress(value, animate)`, `getBatteryValues()`, `getProgress()`
+
+**Auto-Regeneration System:**
+```javascript
+// In MainScene create()
+this.lastClickTime = 0;
+this.startBatteryRegeneration();
+
+startBatteryRegeneration() {
+  this.batteryRegenTimer = this.time.addEvent({
+    delay: 300, // Check every 0.3 seconds
+    callback: () => {
+      const timeSinceLastClick = this.time.now - this.lastClickTime;
+
+      // Only regen if idle for 1+ second
+      if (timeSinceLastClick >= 1000) {
+        const current = this.batteryState.get();
+        if (current < 100) {
+          const newBattery = current + 1;
+          this.batteryState.set(newBattery);
+          this.batteryBar.setBattery(newBattery, 100, true);
+        }
+      }
+    },
+    loop: true
+  });
+}
+
+// On any action that consumes energy
+openChest() {
+  this.lastClickTime = this.time.now; // Reset regen timer
+
+  const current = this.batteryState.get();
+  if (current <= 5) return; // Stop at 5/100 minimum
+
+  const newBattery = current - 1;
+  this.batteryState.set(newBattery);
+  this.batteryBar.setBattery(newBattery, 100, true);
+}
+```
+
+**Regeneration Behavior:**
+- Checks every 300ms if user has been idle for 1+ second
+- Regenerates 1 energy per second when idle
+- Stops at 100 (max energy)
+- Stops consuming at 5 (minimum energy threshold)
+- Persists to localStorage automatically via `withPersistentState`
+
+**Use Cases:** Energy systems, stamina bars, action cooldowns, daily limits
+
 ### NineSlice Button Pattern
 Scalable buttons preserving rounded corners.
 

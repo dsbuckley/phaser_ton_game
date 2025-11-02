@@ -393,10 +393,10 @@ export default class MainScene extends Phaser.Scene {
     // Record the time of this click for battery regeneration logic
     this.lastClickTime = this.time.now;
 
-    // Check if battery is too low (stop at 5/100)
+    // Check if battery is too low (stop at 6/100)
     const currentBattery = this.batteryState.get();
-    if (currentBattery <= 5) {
-      console.log('Battery too low! Need more than 5 energy to open chest.');
+    if (currentBattery <= 6) {
+      console.log('Battery too low! Need more than 6 energy to open chest.');
       // TODO: Show "Low Energy" message to user
       return;
     }
