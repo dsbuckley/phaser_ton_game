@@ -49,7 +49,7 @@ export default class MainScene extends Phaser.Scene {
   startBatteryRegeneration() {
     // Create a repeating timer that runs every second
     this.batteryRegenTimer = this.time.addEvent({
-      delay: 1000, // 1 second
+      delay: 500, // 0.5 second
       callback: () => {
         const currentTime = this.time.now;
         const timeSinceLastClick = currentTime - this.lastClickTime;
