@@ -571,6 +571,50 @@ this.time.delayedCall(400, () => this.createCoinConfetti());
 - Always destroy sprites after animation completes to prevent memory leaks
 - Layer effects with tween animations (scale, alpha, rotation)
 
+### Floating Text Effects
+Display reward amounts or damage numbers that float upward and fade away.
+
+**Pattern: Floating "+X" reward text**
+
+```javascript
+createCoinConfetti(coinAmount) {
+  const chestX = this.player.x;
+  const chestY = this.player.y;
+
+  // ... coin physics sprites code ...
+
+  // Create floating "+X" text that rises and fades
+  const floatingText = this.add.text(chestX, chestY, `+${coinAmount}`, {
+    fontFamily: 'Tilt Warp',
+    fontSize: '48px',
+    fill: '#FFFFFF', // White color
+    stroke: '#000000',
+    strokeThickness: 6,
+    padding: { x: 20, y: 20 },
+    resolution: 2
+  }).setOrigin(0.5);
+
+  // Animate text floating upward and fading out
+  this.tweens.add({
+    targets: floatingText,
+    y: chestY - 250, // Float up 250 pixels
+    alpha: 0, // Fade to transparent
+    duration: 1000, // 1 second
+    ease: 'Sine.easeOut', // Smooth deceleration
+    onComplete: () => floatingText.destroy()
+  });
+}
+```
+
+**Floating Text Tips:**
+- Use Tilt Warp font for playful display text, LINESeed for UI labels
+- White text (#FFFFFF) with black stroke provides maximum contrast
+- Combine with particle effects (coins fall down, text floats up)
+- Use `Sine.easeOut` for natural deceleration
+- Always destroy text after animation completes
+- Adjust duration (1000ms = fast, 2000ms = slow) based on readability needs
+- Position text centered on the action source for clarity
+
 ## Asset Loading & Error Handling
 
 ### Two-Stage Loading Pattern

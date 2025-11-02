@@ -26,6 +26,12 @@ export default class MainScene extends Phaser.Scene {
     // Initialize persistent battery state (starts at 100)
     this.batteryState = withPersistentState(this, 'batteryEnergy', 100);
 
+    // Initialize timestamp tracking for offline regeneration
+    this.lastBatteryUpdateTime = withPersistentState(this, 'lastBatteryUpdateTime', Date.now());
+
+    // Calculate and apply offline energy regeneration
+    this.applyOfflineRegeneration();
+
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
@@ -46,6 +52,37 @@ export default class MainScene extends Phaser.Scene {
     this.startBatteryRegeneration();
   }
 
+  applyOfflineRegeneration() {
+    const currentTime = Date.now();
+    const lastUpdateTime = this.lastBatteryUpdateTime.get();
+    const currentBattery = this.batteryState.get();
+
+    // Calculate elapsed time in seconds
+    const elapsedSeconds = (currentTime - lastUpdateTime) / 1000;
+
+    // Only apply if at least 1 second has passed and battery is below max
+    if (elapsedSeconds >= 1 && currentBattery < 100) {
+      // Regeneration rate: 3.3 energy per second (matching active regeneration)
+      const energyGained = Math.floor(elapsedSeconds * 3.3);
+
+      if (energyGained > 0) {
+        // Calculate new battery value (clamped to max 100)
+        const newBattery = Math.min(currentBattery + energyGained, 100);
+
+        // Update battery state
+        this.batteryState.set(newBattery);
+        this.lastBatteryUpdateTime.set(currentTime);
+
+        // Log offline regeneration for debugging
+        const minutesElapsed = Math.floor(elapsedSeconds / 60);
+        console.log(`Offline regeneration: +${energyGained} energy (${minutesElapsed} minutes offline)`);
+      }
+    } else {
+      // Still update timestamp even if no regeneration occurred
+      this.lastBatteryUpdateTime.set(currentTime);
+    }
+  }
+
   startBatteryRegeneration() {
     // Create a repeating timer that runs every second
     this.batteryRegenTimer = this.time.addEvent({
@@ -63,6 +100,9 @@ export default class MainScene extends Phaser.Scene {
             const newBattery = currentBattery + 1;
             this.batteryState.set(newBattery);
             this.batteryBar.setBattery(newBattery, 100, true);
+
+            // Update timestamp for offline regeneration tracking
+            this.lastBatteryUpdateTime.set(Date.now());
           }
         }
       },
@@ -439,6 +479,9 @@ export default class MainScene extends Phaser.Scene {
     this.batteryState.set(newBattery);
     this.batteryBar.setBattery(newBattery, 100, true);
 
+    // Update timestamp for offline regeneration tracking
+    this.lastBatteryUpdateTime.set(Date.now());
+
     // Play treasure chest sound
     this.sound.play('chest_sound');
 
@@ -448,8 +491,11 @@ export default class MainScene extends Phaser.Scene {
     // Restart chest opening animation (restarts if already playing)
     this.player.play('chest_open', true);
 
-    // Generate random coin reward (2-10 coins per click)
-    const coinReward = Phaser.Math.Between(2, 20);
+    // 20% chance for big payout (20-50 coins), 80% chance for normal payout (1-9 coins)
+    const isBigPayout = Math.random() < 0.10;
+    const coinReward = isBigPayout
+      ? Phaser.Math.Between(20, 50)  // Big payout
+      : Phaser.Math.Between(1, 9);   // Normal payout
 
     // Trigger coin confetti after 300ms delay with the coin reward amount
     this.time.delayedCall(300, () => {
