@@ -49,7 +49,7 @@ export default class MainScene extends Phaser.Scene {
   startBatteryRegeneration() {
     // Create a repeating timer that runs every second
     this.batteryRegenTimer = this.time.addEvent({
-      delay: 500, // 0.5 second
+      delay: 300, // 0.3 second
       callback: () => {
         const currentTime = this.time.now;
         const timeSinceLastClick = currentTime - this.lastClickTime;
@@ -288,6 +288,7 @@ export default class MainScene extends Phaser.Scene {
       maxValue: 100,
       iconSize: 45,
       iconOffsetX: -10, // Moved further left to edge of bar
+      showText: false, // Hide the numbers
       fontSize: '18px', // Smaller font for thinner bar
       textStrokeThickness: 3
     });
