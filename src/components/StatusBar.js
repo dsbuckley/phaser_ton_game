@@ -303,6 +303,12 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       const formattedValue = this.formatNumber(value);
 
       if (animate) {
+        // Kill any existing tweens on this text to prevent stacking
+        this.scene.tweens.killTweensOf(display.text);
+
+        // Reset scale to 1 before starting new animation
+        display.text.setScale(1);
+
         // Scale animation for value change
         this.scene.tweens.add({
           targets: display.text,

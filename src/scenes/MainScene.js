@@ -132,6 +132,12 @@ export default class MainScene extends Phaser.Scene {
 
       // Press down effect
       this.player.on('pointerdown', () => {
+        // Kill any existing tweens to prevent stacking
+        this.tweens.killTweensOf(this.player);
+
+        // Reset scale before starting new animation
+        this.player.setScale(0.85);
+
         this.tweens.add({
           targets: this.player,
           scaleX: 0.80,
@@ -145,6 +151,9 @@ export default class MainScene extends Phaser.Scene {
 
       // Release effect
       this.player.on('pointerup', () => {
+        // Kill any existing tweens to prevent stacking
+        this.tweens.killTweensOf(this.player);
+
         this.tweens.add({
           targets: this.player,
           scaleX: 0.85,
