@@ -14,12 +14,17 @@ export default class MainScene extends Phaser.Scene {
     this.walletAddress = null;
     this.audioUnlocked = false;
     this.firstClick = false;
+    this.lastClickTime = 0;
+    this.batteryRegenTimer = null;
   }
 
   create() {
     // Initialize persistent coin state using phaser-hooks
     // This will automatically save to localStorage and persist across sessions
     this.coinsState = withPersistentState(this, 'totalCoins', 0);
+
+    // Initialize persistent battery state (starts at 100)
+    this.batteryState = withPersistentState(this, 'batteryEnergy', 100);
 
     // Initialize Supabase client
     // TODO: Replace with your actual Supabase credentials from environment variables
@@ -36,6 +41,33 @@ export default class MainScene extends Phaser.Scene {
 
     // Create UI (assets and fonts already loaded by LoadingScene)
     this.createUI();
+
+    // Start battery regeneration timer
+    this.startBatteryRegeneration();
+  }
+
+  startBatteryRegeneration() {
+    // Create a repeating timer that runs every second
+    this.batteryRegenTimer = this.time.addEvent({
+      delay: 1000, // 1 second
+      callback: () => {
+        const currentTime = this.time.now;
+        const timeSinceLastClick = currentTime - this.lastClickTime;
+
+        // Only regenerate if user hasn't clicked for at least 1 second
+        if (timeSinceLastClick >= 1000) {
+          const currentBattery = this.batteryState.get();
+
+          // Only increase if below max (100)
+          if (currentBattery < 100) {
+            const newBattery = currentBattery + 1;
+            this.batteryState.set(newBattery);
+            this.batteryBar.setBattery(newBattery, 100, true);
+          }
+        }
+      },
+      loop: true
+    });
   }
 
   createChestAnimation() {
@@ -243,13 +275,16 @@ export default class MainScene extends Phaser.Scene {
     const barX = screenWidth / 2;
     const barY = 90; // Below status bar with some spacing
 
+    // Load current battery value from persistent state
+    const currentBattery = this.batteryState.get();
+
     this.batteryBar = new BatteryBar(this, barX, barY, {
       width: barWidth,
       height: barHeight,
       iconTexture: 'battery_icon',
       fillTexture: 'slider_fill_green',
       bgTexture: 'slider_bg',
-      currentValue: 100,
+      currentValue: currentBattery,
       maxValue: 100,
       iconSize: 45,
       iconOffsetX: -10, // Moved further left to edge of bar
@@ -354,6 +389,17 @@ export default class MainScene extends Phaser.Scene {
   }
 
   openChest() {
+    // Record the time of this click for battery regeneration logic
+    this.lastClickTime = this.time.now;
+
+    // Check if battery is depleted
+    const currentBattery = this.batteryState.get();
+    if (currentBattery <= 0) {
+      console.log('Battery depleted! Cannot open chest.');
+      // TODO: Show "No Energy" message to user
+      return;
+    }
+
     // Hide "Tap Me" text on first click
     if (!this.firstClick && this.tapMeText) {
       this.tweens.add({
@@ -377,6 +423,11 @@ export default class MainScene extends Phaser.Scene {
         console.warn('Failed to unlock audio:', err);
       });
     }
+
+    // Decrease battery by 1
+    const newBattery = currentBattery - 1;
+    this.batteryState.set(newBattery);
+    this.batteryBar.setBattery(newBattery, 100, true);
 
     // Play treasure chest sound
     this.sound.play('chest_sound');
