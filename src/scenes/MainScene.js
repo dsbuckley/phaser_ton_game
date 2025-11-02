@@ -3,6 +3,7 @@ import { TonConnectUI } from '@tonconnect/ui';
 import { createClient } from '@supabase/supabase-js';
 import { withPersistentState } from '../utils/persistentState.js';
 import StatusBar from '../components/StatusBar.js';
+import BatteryBar from '../components/BatteryBar.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -227,6 +228,40 @@ export default class MainScene extends Phaser.Scene {
     // Set status bar to stay at top (fixed position)
     this.statusBar.setScrollFactor(0);
     this.statusBar.setDepth(1000); // Ensure it's always on top
+
+    // Create battery bar below the status bar
+    this.createBatteryBar();
+  }
+
+  createBatteryBar() {
+    // Calculate responsive width (span most of the screen with margins)
+    const screenWidth = this.cameras.main.width;
+    const barWidth = Math.min(screenWidth - 40, 400); // 20px margin on each side, max 400px
+    const barHeight = 30; // Further reduced height for thinner bar
+
+    // Position below the status bar (status bar is at y=30, height ~60px)
+    const barX = screenWidth / 2;
+    const barY = 90; // Below status bar with some spacing
+
+    this.batteryBar = new BatteryBar(this, barX, barY, {
+      width: barWidth,
+      height: barHeight,
+      iconTexture: 'battery_icon',
+      fillTexture: 'slider_fill_green',
+      bgTexture: 'slider_bg',
+      currentValue: 100,
+      maxValue: 100,
+      iconSize: 45,
+      iconOffsetX: -10, // Moved further left to edge of bar
+      fontSize: '18px', // Smaller font for thinner bar
+      textStrokeThickness: 3
+    });
+
+    this.add.existing(this.batteryBar);
+
+    // Fixed position at top
+    this.batteryBar.setScrollFactor(0);
+    this.batteryBar.setDepth(999); // Below status bar but above game content
   }
 
   getTelegramUserData() {

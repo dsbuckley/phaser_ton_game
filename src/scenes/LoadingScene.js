@@ -17,6 +17,7 @@ export default class LoadingScene extends Phaser.Scene {
     // ONLY load the progress bar assets in preload
     this.load.image('slider_bg', '/assets/Components/Slider/Slider_Basic01_Bg.Png');
     this.load.image('slider_fill_magenta', '/assets/Components/Slider/Slider_Basic01_Fill_Magenta.Png');
+    this.load.image('slider_fill_green', '/assets/Components/Slider/Slider_Basic01_Fill_Green.Png');
 
     // Handle loading errors gracefully
     this.load.on('loaderror', (file) => {
@@ -82,6 +83,9 @@ export default class LoadingScene extends Phaser.Scene {
     // Pill-shaped container assets
     loader.image('label_oval_demo', '/assets/Components/Label/Label_Oval02_Demo.png');
     loader.image('label_oval_white', '/assets/Components/Label/Label_Oval02_White.png');
+
+    // Battery bar icon
+    loader.image('battery_icon', '/assets/Components/Icon_ItemIcons/512/ItemIcon_Battery.png');
 
     // Sounds
     loader.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
