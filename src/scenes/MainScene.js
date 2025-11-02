@@ -252,7 +252,7 @@ export default class MainScene extends Phaser.Scene {
     this.statusBar = new StatusBar(this, 0, 30, {
       avatarTexture: 'avatar_default',
       avatarUrl: avatarUrl,
-      userLevel: 4, // TODO: Get from user data/database
+      userLevel: 1, // TODO: Get from user data/database
       resources: [
         { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get(), width: 95 },
         { key: 'tickets', icon: 'statusbar_ticket', value: 0, width: 65 },
@@ -448,8 +448,8 @@ export default class MainScene extends Phaser.Scene {
     // Restart chest opening animation (restarts if already playing)
     this.player.play('chest_open', true);
 
-    // Generate random coin reward (10-50 coins per click)
-    const coinReward = Phaser.Math.Between(5, 25);
+    // Generate random coin reward (2-10 coins per click)
+    const coinReward = Phaser.Math.Between(2, 20);
 
     // Trigger coin confetti after 300ms delay with the coin reward amount
     this.time.delayedCall(300, () => {
@@ -518,6 +518,27 @@ export default class MainScene extends Phaser.Scene {
         });
       });
     }
+
+    // Create floating "+X" text that rises and fades
+    const floatingText = this.add.text(chestX, chestY, `+${coinAmount}`, {
+      fontFamily: 'Tilt Warp',
+      fontSize: '48px',
+      fill: '#FFFFFF', // White color
+      stroke: '#000000',
+      strokeThickness: 6,
+      padding: { x: 20, y: 20 },
+      resolution: 2
+    }).setOrigin(0.5);
+
+    // Animate text floating upward and fading out
+    this.tweens.add({
+      targets: floatingText,
+      y: chestY - 250, // Float up 250 pixels
+      alpha: 0, // Fade to transparent
+      duration: 1000, // 1 second (faster)
+      ease: 'Sine.easeOut', // Smooth deceleration
+      onComplete: () => floatingText.destroy()
+    });
 
     // Update total coins using phaser-hooks persistent state
     // This automatically saves to localStorage

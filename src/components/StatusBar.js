@@ -91,7 +91,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     // Level text below avatar - smaller font
     this.levelText = this.scene.add.text(avatarX, avatarY + 24, `${this.config.userLevel} LVL`, {
       fontFamily: 'LINESeed',
-      fontSize: 14,               // use a number, not a string
+      fontSize: 18,               // use a number, not a string
       color: '#ffffff',          // Phaser’s preferred key
       fontStyle: 'bold',
       stroke: '#000000',
@@ -213,7 +213,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     const valueText = this.scene.add.text(textX, textY, this.formatNumber(value), {
       fontFamily: 'LINESeed',
-      fontSize: 14, // Smaller font for compact layout
+      fontSize: 18, // Smaller font for compact layout
       color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
