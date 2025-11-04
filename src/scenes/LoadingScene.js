@@ -14,7 +14,8 @@ export default class LoadingScene extends Phaser.Scene {
     const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     this.minLoadTime = isLocalhost ? 0 : 1500; // Minimum 1.5 seconds in production only
 
-    // ONLY load the progress bar assets in preload
+    // ONLY load the progress bar assets and background in preload
+    this.load.image('loading_screen_bg', '/assets/loading_screen.webp');
     this.load.image('slider_bg', '/assets/Components/Slider/Slider_Basic01_Bg.Png');
     this.load.image('slider_fill_magenta', '/assets/Components/Slider/Slider_Basic01_Fill_Magenta.Png');
     this.load.image('slider_fill_green', '/assets/Components/Slider/Slider_Basic01_Fill_Green.Png');
@@ -96,40 +97,32 @@ export default class LoadingScene extends Phaser.Scene {
 
   createLoadingUI() {
     const centerX = this.cameras.main.width / 2;
-    const centerY = this.cameras.main.height / 2;
+    const screenHeight = this.cameras.main.height;
 
-    // Title text with Tilt Warp font
-    this.add.text(centerX, centerY - 200, 'Telegram TON Game', {
-      fontFamily: 'Tilt Warp',
-      fontSize: '42px',
-      fill: '#fff',
-      stroke: '#000000',
-      strokeThickness: 6,
-      padding: { x: 20, y: 20 },
-      shadow: {
-        offsetX: 3,
-        offsetY: 3,
-        color: '#000000',
-        blur: 0,
-        stroke: false,
-        fill: true
-      },
-      resolution: 2
-    }).setOrigin(0.5);
+    // Add background image that fills the entire screen
+    const bg = this.add.image(centerX, screenHeight / 2, 'loading_screen_bg');
 
-    // Create loading slider component
-    // TileSprite will repeat the pattern, so we can use any size
-    const barWidth = Math.min(380, this.cameras.main.width * 0.85); // Responsive width
-    const barHeight = 60; // Height that shows the pattern well
+    // Scale the background to cover the entire screen
+    const scaleX = this.cameras.main.width / bg.width;
+    const scaleY = screenHeight / bg.height;
+    const scale = Math.max(scaleX, scaleY);
+    bg.setScale(scale);
 
-    this.loadingSlider = new LoadingSlider(this, centerX, centerY, {
+    // Position slider in bottom third of screen
+    const sliderY = screenHeight * 0.75; // 75% down from top = bottom third
+
+    // Create smaller loading slider component
+    const barWidth = Math.min(280, this.cameras.main.width * 0.7); // Smaller width
+    const barHeight = 45; // Smaller height
+
+    this.loadingSlider = new LoadingSlider(this, centerX, sliderY, {
       bgTexture: 'slider_bg',
       fillTexture: 'slider_fill_magenta',
       width: barWidth,
       height: barHeight,
       textFormat: 'fraction', // Shows "999 / 999" format
       fontFamily: 'LINESeed',
-      fontSize: '20px',
+      fontSize: '16px',
       textColor: '#ffffff',
       textStroke: '#000000',
       textStrokeThickness: 3
@@ -139,14 +132,5 @@ export default class LoadingScene extends Phaser.Scene {
 
     // Set initial progress to 0
     this.loadingSlider.setProgress(0, false);
-
-    // Loading text below progress bar
-    this.loadingText = this.add.text(centerX, centerY + 80, 'LOADING...', {
-      fontFamily: 'LINESeed',
-      fontSize: '24px',
-      fill: '#fff',
-      fontStyle: 'bold',
-      resolution: 2
-    }).setOrigin(0.5);
   }
 }
