@@ -61,7 +61,7 @@ export default class LoadingScene extends Phaser.Scene {
     });
 
     // Load all game assets
-    loader.image('background', '/assets/main_scene4.png');
+    loader.image('background', '/assets/main_scene5.webp');
     loader.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
 
     // Load treasure chest animation frames (every other frame: 1, 3, 5, ... 37)
@@ -70,10 +70,10 @@ export default class LoadingScene extends Phaser.Scene {
       loader.image(`chest_${frameNum}`, `/assets/sprites/open treasure/frame_${frameNum}.webp`);
     }
 
-    // Load palm tree animation frames (all 38 frames for smooth slow animation)
-    for (let i = 1; i <= 38; i++) {
+    // Load palm tree 2 animation frames (first 75 frames for smooth slow animation)
+    for (let i = 1; i <= 75; i++) {
       const frameNum = String(i).padStart(3, '0');
-      loader.image(`palm_${frameNum}`, `/assets/sprites/palm tree/frame_${frameNum}.webp`);
+      loader.image(`palm_${frameNum}`, `/assets/sprites/palm tree 2/frame_${frameNum}.webp`);
     }
 
     // Status bar assets
@@ -96,6 +96,9 @@ export default class LoadingScene extends Phaser.Scene {
 
     // Sounds
     loader.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
+
+    // Sparkle effect
+    loader.image('sparkle', '/assets/sparkle.webp');
 
     // Start loading
     loader.start();

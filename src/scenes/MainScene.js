@@ -234,9 +234,9 @@ export default class MainScene extends Phaser.Scene {
   }
 
   createPalmTreeAnimation() {
-    // Build frame array for animation (all 38 frames)
+    // Build frame array for animation (first 75 frames)
     const frames = [];
-    for (let i = 1; i <= 38; i++) {
+    for (let i = 1; i <= 75; i++) {
       const frameNum = String(i).padStart(3, '0');
       frames.push({ key: `palm_${frameNum}` });
     }
@@ -245,9 +245,91 @@ export default class MainScene extends Phaser.Scene {
     this.anims.create({
       key: 'palm_tree_sway',
       frames: frames,
-      frameRate: 15, // 38 frames at 6fps = 6.3 seconds per loop (very slow motion)
+      frameRate: 15, // 75 frames at 30fps = 2.5 seconds per loop (smooth motion)
       repeat: -1, // Loop forever
       yoyo: true // Play forward then reverse for smooth back-and-forth motion
+    });
+  }
+
+  createSparkles() {
+    // Sun is in the upper-left area of the background
+    // Position sparkles below and to the right of the sun
+    const sunX = 80; // Approximate sun position from the background
+    const sunY = 200; // Below the sun
+
+    // Define the area where sparkles can appear
+    const sparkleAreaX = sunX + 50; // To the right of sun
+    const sparkleAreaY = sunY + 50; // Below the sun
+    const areaWidth = 200; // Spread area width
+    const areaHeight = 150; // Spread area height
+
+    // Track active sparkles
+    this.activeSparkles = [];
+
+    // Create sparkles continuously
+    this.sparkleTimer = this.time.addEvent({
+      delay: 800, // Create a new sparkle every 0.8 seconds
+      callback: () => {
+        // Only create new sparkle if we have less than 6 active
+        if (this.activeSparkles.length < 6) {
+          this.createSingleSparkle(sparkleAreaX, sparkleAreaY, areaWidth, areaHeight);
+        }
+      },
+      loop: true
+    });
+  }
+
+  createSingleSparkle(baseX, baseY, areaWidth, areaHeight) {
+    // Random position within the defined area
+    const x = baseX + Phaser.Math.Between(-areaWidth / 2, areaWidth / 2);
+    const y = baseY + Phaser.Math.Between(-areaHeight / 2, areaHeight / 2);
+
+    // Random scale (256px image scaled down to 10-30px)
+    const randomScale = Phaser.Math.FloatBetween(0.04, 0.12); // 10-30px from 256px
+
+    // Create sparkle sprite
+    const sparkle = this.add.image(x, y, 'sparkle');
+    sparkle.setScale(randomScale);
+    sparkle.setAlpha(0); // Start invisible
+
+    // Add to active sparkles array
+    this.activeSparkles.push(sparkle);
+
+    // Fade in, sparkle (scale pulse), fade out, then remove
+    this.tweens.add({
+      targets: sparkle,
+      alpha: 1,
+      duration: 500,
+      ease: 'Sine.easeIn',
+      onComplete: () => {
+        // Sparkle effect: pulse the scale
+        this.tweens.add({
+          targets: sparkle,
+          scaleX: randomScale * 1.3,
+          scaleY: randomScale * 1.3,
+          duration: 400,
+          ease: 'Sine.easeInOut',
+          yoyo: true,
+          repeat: 1, // Pulse twice (once forward, once back)
+          onComplete: () => {
+            // Fade out
+            this.tweens.add({
+              targets: sparkle,
+              alpha: 0,
+              duration: 600,
+              ease: 'Sine.easeOut',
+              onComplete: () => {
+                // Remove from active sparkles and destroy
+                const index = this.activeSparkles.indexOf(sparkle);
+                if (index > -1) {
+                  this.activeSparkles.splice(index, 1);
+                }
+                sparkle.destroy();
+              }
+            });
+          }
+        });
+      }
     });
   }
 
@@ -373,10 +455,15 @@ export default class MainScene extends Phaser.Scene {
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
     }
 
+    // Create sparkles below and to the right of the sun
+    this.createSparkles();
+
     // Create palm tree sprite (starts with first frame, positioned on right side)
+    // Place AFTER sparkles so it renders on top
     if (this.textures.exists('palm_001')) {
       this.palmTree = this.add.sprite(centerX + 125, centerY - 10, 'palm_001');
       this.palmTree.setScale(1.3); // Scale up to take up most of the screen
+      this.palmTree.setDepth(100); // Ensure palm tree is always in front of sparkles
 
       // Start the swaying animation immediately
       this.palmTree.play('palm_tree_sway');
