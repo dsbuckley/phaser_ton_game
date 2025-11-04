@@ -61,7 +61,7 @@ export default class LoadingScene extends Phaser.Scene {
     });
 
     // Load all game assets
-    loader.image('background', '/assets/main_scene5.webp');
+    loader.image('background', '/assets/main_scene8.webp');
     loader.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
 
     // Load treasure chest animation frames (every other frame: 1, 3, 5, ... 37)
@@ -99,6 +99,14 @@ export default class LoadingScene extends Phaser.Scene {
 
     // Sparkle effect
     loader.image('sparkle', '/assets/sparkle.webp');
+
+    // Cloud images
+    loader.image('cloud1', '/assets/clouds/1.webp');
+    loader.image('cloud2', '/assets/clouds/2.webp');
+    loader.image('cloud3', '/assets/clouds/3.webp');
+
+    // Sun
+    loader.image('sun', '/assets/sun.webp');
 
     // Start loading
     loader.start();

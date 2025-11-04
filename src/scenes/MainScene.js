@@ -251,6 +251,135 @@ export default class MainScene extends Phaser.Scene {
     });
   }
 
+  createSun() {
+    // Position sun in upper left where the background sun is
+    const sunX = 30;
+    const sunY = 150;
+
+    // Create sun sprite
+    this.sun = this.add.image(sunX, sunY, 'sun');
+    this.sun.setScale(0.4); // Scale to appropriate size
+    this.sun.setDepth(-20); // In front of clouds (-50 to -30), behind sparkles (0)
+
+    // Pulsating animation (scale up and down)
+    this.tweens.add({
+      targets: this.sun,
+      scaleX: 0.45,
+      scaleY: 0.45,
+      duration: 2000,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1 // Loop forever
+    });
+
+    // Rotation animation (slow gentle rotation)
+    this.tweens.add({
+      targets: this.sun,
+      angle: 360,
+      duration: 60000, // 60 seconds for full rotation (very slow)
+      ease: 'Linear',
+      repeat: -1 // Loop forever
+    });
+  }
+
+  createClouds() {
+    // Track active clouds
+    this.activeClouds = [];
+
+    // Define three depth layers for parallax effect
+    this.cloudLayers = [
+      {
+        depth: -50, // Behind everything (far)
+        scale: { min: 0.15, max: 0.25 },
+        alpha: 0.5, // More transparent (far away)
+        speed: { min: 8, max: 12 }, // Very slow (far away)
+        yPosition: { min: 80, max: 140 } // Upper sky area
+      },
+      {
+        depth: -40, // Middle distance
+        scale: { min: 0.25, max: 0.35 },
+        alpha: 0.65, // Medium transparency
+        speed: { min: 12, max: 18 }, // Slow
+        yPosition: { min: 100, max: 180 }
+      },
+      {
+        depth: -30, // Closer
+        scale: { min: 0.35, max: 0.5 },
+        alpha: 0.8, // Less transparent
+        speed: { min: 18, max: 25 }, // Moderate speed
+        yPosition: { min: 120, max: 220 }
+      }
+    ];
+
+    // Create initial clouds and set up continuous spawning
+    this.cloudTimer = this.time.addEvent({
+      delay: 8000, // New cloud every 8 seconds (much slower spawning)
+      callback: () => {
+        // Only spawn if we have fewer than 5 clouds active
+        if (this.activeClouds.length < 5) {
+          this.createSingleCloud();
+        }
+      },
+      loop: true
+    });
+
+    // Spawn 2-3 initial clouds spread out
+    for (let i = 0; i < 3; i++) {
+      this.time.delayedCall(i * 3000, () => {
+        this.createSingleCloud();
+      });
+    }
+  }
+
+  createSingleCloud() {
+    const screenWidth = this.cameras.main.width;
+
+    // Choose random cloud image (1, 2, or 3)
+    const cloudType = Phaser.Math.Between(1, 3);
+    const cloudKey = `cloud${cloudType}`;
+
+    // Choose random layer for parallax effect
+    const layer = Phaser.Utils.Array.GetRandom(this.cloudLayers);
+
+    // Random scale within layer range
+    const scale = Phaser.Math.FloatBetween(layer.scale.min, layer.scale.max);
+
+    // Random Y position within layer range
+    const y = Phaser.Math.Between(layer.yPosition.min, layer.yPosition.max);
+
+    // Start off-screen to the left
+    const startX = -200;
+
+    // Create cloud sprite
+    const cloud = this.add.image(startX, y, cloudKey);
+    cloud.setScale(scale);
+    cloud.setAlpha(layer.alpha);
+    cloud.setDepth(layer.depth); // Set depth for proper layering
+
+    // Add to active clouds array
+    this.activeClouds.push(cloud);
+
+    // Random speed within layer range
+    const speed = Phaser.Math.Between(layer.speed.min, layer.speed.max);
+    const duration = ((screenWidth + 400) / speed) * 1000; // Duration based on speed
+
+    // Animate cloud moving from left to right
+    this.tweens.add({
+      targets: cloud,
+      x: screenWidth + 200, // Move off-screen to the right
+      duration: duration,
+      ease: 'Linear',
+      onComplete: () => {
+        // Remove from active clouds and destroy
+        const index = this.activeClouds.indexOf(cloud);
+        if (index > -1) {
+          this.activeClouds.splice(index, 1);
+        }
+        cloud.destroy();
+      }
+    });
+  }
+
   createSparkles() {
     // Sun is in the upper-left area of the background
     // Position sparkles below and to the right of the sun
@@ -349,7 +478,14 @@ export default class MainScene extends Phaser.Scene {
       const scaleY = this.cameras.main.height / bg.height;
       const scale = Math.max(scaleX, scaleY) * 1.01;
       bg.setScale(scale);
+      bg.setDepth(-100); // Push background behind clouds
     }
+
+    // Create clouds (in front of background, behind other elements)
+    this.createClouds();
+
+    // Create animated sun (in front of clouds, behind sparkles)
+    this.createSun();
 
     // Create treasure chest sprite (starts with first frame)
     if (this.textures.exists('chest_0001')) {
