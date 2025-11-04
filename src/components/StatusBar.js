@@ -23,6 +23,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
    * @param {Object} config - Configuration object
    * @param {string} config.avatarTexture - Texture key for user avatar (optional)
    * @param {string} config.avatarUrl - URL for Telegram user photo (optional)
+   * @param {string} config.username - Username to display with level (default: 'Player')
    * @param {number} config.userLevel - User level number (default: 1)
    * @param {Array} config.resources - Array of resource configs [{icon, value, key}]
    * @param {Function} config.onSettingsClick - Callback for settings button tap
@@ -34,6 +35,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     this.config = {
       avatarTexture: config.avatarTexture || 'avatar_default',
       avatarUrl: config.avatarUrl || null,
+      username: config.username || 'Player',
       userLevel: config.userLevel || 1,
       resources: config.resources || [
         { key: 'coins', icon: 'statusbar_coin', value: 0 },
@@ -94,18 +96,40 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     // HTML avatar container for Telegram photos (overlays Phaser canvas)
     this.htmlAvatarContainer = null;
 
-    // Level text below avatar - smaller font
-    this.levelText = this.scene.add.text(avatarX, avatarY + 24, `${this.config.userLevel} LVL`, {
+    // Level circle and username text below avatar
+    const textY = avatarY + 34;
+
+    // Create level number circle (positioned to the left of username)
+    const levelCircleRadius = 12;
+    const levelCircleX = avatarX - 10; // Position left of center
+
+    this.levelCircle = this.scene.add.circle(levelCircleX, textY, levelCircleRadius, 0x3498db);
+    this.levelCircle.setStrokeStyle(2, 0xffffff, 1);
+    this.add(this.levelCircle);
+
+    // Level number text inside circle
+    this.levelNumberText = this.scene.add.text(levelCircleX, textY, `${this.config.userLevel}`, {
       fontFamily: 'LINESeed',
-      fontSize: 18,               // use a number, not a string
-      color: '#ffffff',          // Phaser's preferred key
+      fontSize: 14,
+      color: '#ffffff',
+      fontStyle: 'bold',
+      resolution: window.devicePixelRatio
+    }).setOrigin(0.5);
+    this.add(this.levelNumberText);
+
+    // Username text (positioned to the right of circle)
+    const usernameX = avatarX + 5; // Slightly right of center
+    this.usernameText = this.scene.add.text(usernameX, textY, `${this.config.username}`, {
+      fontFamily: 'LINESeed',
+      fontSize: 16,
+      color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 4,
-      resolution: window.devicePixelRatio // key for clarity
-    }).setOrigin(0.5);
+      strokeThickness: 3,
+      resolution: window.devicePixelRatio
+    }).setOrigin(0, 0.5); // Left-aligned
 
-    this.add(this.levelText);
+    this.add(this.usernameText);
   }
 
   /**
@@ -410,7 +434,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
    */
   setLevel(level) {
     this.config.userLevel = level;
-    this.levelText.setText(`${level} LVL`);
+    this.levelNumberText.setText(`${level}`);
   }
 
   /**

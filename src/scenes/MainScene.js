@@ -380,6 +380,7 @@ export default class MainScene extends Phaser.Scene {
     this.statusBar = new StatusBar(this, 0, 30, {
       avatarTexture: 'avatar_default',
       avatarUrl: avatarUrl,
+      username: this.telegramUser?.username || 'Player',
       userLevel: this.userLevelState.get(),
       resources: [
         { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get(), width: 95 },

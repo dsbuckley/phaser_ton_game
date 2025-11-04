@@ -61,8 +61,11 @@ npm run preview         # Preview production build
 
 **Supabase Database:**
 - Client init with env vars: `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`
-- User upsert: `telegram_id` (unique), `username`, `wallet_address`, `high_score`
-- Schema in `src/scenes/MainScene.js` (run in Supabase SQL editor before use)
+- **Two tables:** `users` (identity) and `user_stats` (game data)
+- **Schema:** See `supabase_schema.sql` - run in Supabase SQL editor to create tables
+- **Auto-save:** Stats save every 5 seconds + on critical events (chest open, scene shutdown)
+- **Dual-write strategy:** localStorage (instant/offline) + Supabase (persistent/cross-device)
+- **Data tracked:** coins, tickets, gems, energy, user_level, total_chests_opened, profile_photo_url
 
 **Telegram WebApp APIs:**
 - `window.Telegram.WebApp.expand()` - Full screen expansion (critical for mobile)
@@ -700,6 +703,28 @@ this.load.on('loaderror', (file) => {
 
 ## State Management
 
+### Dual-Write Persistence Strategy
+The game uses a **dual-write** approach combining localStorage (client-side) and Supabase (server-side) for optimal reliability:
+
+**localStorage (Fast, Offline)**
+- Instant read/write operations (no network latency)
+- Works offline without internet connection
+- Game remains playable in all conditions
+- Automatic via `withPersistentState` utility
+
+**Supabase (Persistent, Cross-Device)**
+- Syncs across devices using Telegram ID
+- Survives browser cache clearing
+- Server-calculated offline energy regeneration
+- Auto-saves every 5 seconds + on critical events
+
+**Data Flow:**
+1. User action (tap chest) → localStorage updated instantly
+2. UI updates immediately (no lag)
+3. Stats save to Supabase asynchronously (5s timer or immediate)
+4. On game load → Supabase values override localStorage (authoritative)
+5. If offline → localStorage continues to work, syncs when back online
+
 ### Custom Persistent State Utility
 **Location:** `src/utils/persistentState.js`
 
@@ -778,3 +803,113 @@ openChest() {
 - Automatically handles scene cleanup via `shutdown` and `destroy` events
 - Gracefully handles localStorage errors (quota exceeded, private browsing, etc.)
 - State persists across browser refreshes and sessions
+
+### Supabase Integration & Auto-Save System
+**Location:** `src/scenes/MainScene.js`
+
+The game automatically syncs all stats to Supabase for cross-device persistence and server-side features.
+
+**Setup Instructions:**
+1. Run `supabase_schema.sql` in Supabase SQL Editor to create tables
+2. Set environment variables in `.env`:
+   - `VITE_SUPABASE_URL` - Your Supabase project URL
+   - `VITE_SUPABASE_ANON_KEY` - Your Supabase anon/public key
+3. Tables are automatically populated when users play the game
+
+**Database Tables:**
+```sql
+-- users: Identity and authentication
+- telegram_id (primary key, BIGINT)
+- username (TEXT)
+- profile_photo_url (TEXT) - Telegram avatar URL
+- wallet_address (TEXT) - TON wallet address
+- created_at, updated_at
+
+-- user_stats: Game progression and resources
+- telegram_id (primary key, links to users)
+- coins, tickets, gems (INTEGER)
+- energy (INTEGER, 0-100)
+- last_energy_update (TIMESTAMP) - For offline regeneration
+- user_level (INTEGER)
+- high_score (INTEGER) - For future leaderboards
+- total_chests_opened (INTEGER) - Activity tracking
+- created_at, updated_at
+```
+
+**Key Functions in MainScene:**
+
+```javascript
+// Called once on game load - initializes user and loads stats
+async initializeUser() {
+  // 1. Upsert user to users table (telegram_id, username, photo_url)
+  // 2. Load stats from user_stats table
+  // 3. If stats exist: Load into game
+  // 4. If new user: Create initial stats row
+  // 5. Calculate server-side offline energy regeneration
+  // 6. Fallback to localStorage if database unavailable
+}
+
+// Called every 5 seconds + on critical events
+async saveStatsToSupabase() {
+  // Upserts current stats to user_stats table
+  // Updates: coins, tickets, gems, energy, user_level,
+  //          total_chests_opened, last_energy_update
+  // Gracefully handles errors (localStorage continues working)
+}
+
+// Starts auto-save timer system
+startAutoSave() {
+  // Timer: Saves every 5 seconds
+  // Event: Saves on scene shutdown
+  // Event: Saves on scene destroy
+}
+```
+
+**Tracked State Variables:**
+```javascript
+this.coinsState = withPersistentState(this, 'totalCoins', 0);
+this.ticketsState = withPersistentState(this, 'totalTickets', 0);
+this.gemsState = withPersistentState(this, 'totalGems', 0);
+this.batteryState = withPersistentState(this, 'batteryEnergy', 100);
+this.userLevelState = withPersistentState(this, 'userLevel', 1);
+this.totalChestsOpenedState = withPersistentState(this, 'totalChestsOpened', 0);
+this.lastBatteryUpdateTime = withPersistentState(this, 'lastBatteryUpdateTime', Date.now());
+```
+
+**When Stats Are Saved:**
+1. **Game Load** - User initialized, stats loaded from database
+2. **Every 5 seconds** - Auto-save timer (background)
+3. **Chest opened** - Immediate save after action
+4. **Game close** - Final save on scene shutdown/destroy
+
+**Offline Energy Regeneration:**
+The system uses server timestamps for more accurate offline regeneration:
+- Client-side: Uses `lastBatteryUpdateTime` localStorage value
+- Server-side: Uses `last_energy_update` database timestamp
+- On load: Calculates elapsed time since `last_energy_update`
+- Rate: 3.3 energy per second (matches active regeneration)
+- Shows notification if energy was gained while away
+
+**Error Handling:**
+- All Supabase operations are wrapped in try/catch blocks
+- Errors are logged but don't break the game
+- localStorage continues to work as backup if database fails
+- Game is fully playable offline
+
+**Security Notes:**
+- Current RLS policies are permissive for demo (`USING (true)`)
+- For production: Implement backend API with Telegram auth verification
+- See security warnings in code comments and `SUPABASE_INTEGRATION.md`
+- Route all database operations through authenticated backend in production
+
+**Querying User Data:**
+Use the `user_profiles` view for convenient access to combined user + stats data:
+```sql
+SELECT * FROM user_profiles WHERE telegram_id = 123456789;
+-- Returns: username, wallet_address, profile_photo_url, coins, energy, etc.
+```
+
+**Documentation:**
+- Full setup guide: `SUPABASE_INTEGRATION.md`
+- SQL schema: `supabase_schema.sql`
+- Testing checklist and troubleshooting in integration docs
