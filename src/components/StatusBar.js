@@ -284,44 +284,45 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     console.log('StatusBar: Attempting to load Telegram photo from:', photoUrl);
 
-    // Create a new loader instance for late-stage loading
-    // (following LoadingScene pattern - loader must be created in create phase)
+    // Use HTML Image element to bypass CORS issues with Telegram CDN redirects
+    // Phaser's loader gets blocked by CORS, but browser <img> tags work fine
     const uniqueKey = `telegram_avatar_${Date.now()}`;
-    const loader = new Phaser.Loader.LoaderPlugin(this.scene);
+    const img = new Image();
 
-    // Success handler
-    loader.once('filecomplete-image-' + uniqueKey, () => {
-      console.log('StatusBar: Image load complete event fired');
-      if (this.scene.textures.exists(uniqueKey)) {
-        // Replace avatar image with loaded photo
+    // Enable cross-origin for the image (allows us to use it in canvas)
+    img.crossOrigin = 'anonymous';
+
+    img.onload = () => {
+      try {
+        console.log('StatusBar: Image loaded successfully via HTML Image element');
+
+        // Add the loaded image as a Phaser texture
+        if (!this.scene.textures.exists(uniqueKey)) {
+          this.scene.textures.addImage(uniqueKey, img);
+          console.log('StatusBar: Added texture to Phaser:', uniqueKey);
+        }
+
+        // Update the avatar image
         if (this.avatarImage) {
           this.avatarImage.setTexture(uniqueKey);
           console.log('StatusBar: Telegram avatar loaded and applied successfully');
         } else {
           console.error('StatusBar: avatarImage is null, cannot set texture');
         }
-      } else {
-        console.error('StatusBar: Texture does not exist after load:', uniqueKey);
+      } catch (error) {
+        console.error('StatusBar: Error processing loaded image:', error);
       }
-    });
+    };
 
-    // Error handler - fallback to default avatar
-    loader.once('loaderror', (file) => {
-      console.error('StatusBar: Failed to load Telegram avatar:', file.key);
+    img.onerror = (error) => {
+      console.error('StatusBar: Failed to load Telegram avatar via HTML Image');
       console.error('StatusBar: Photo URL was:', photoUrl);
-      console.error('StatusBar: Error details:', file);
+      console.error('StatusBar: Error:', error);
       // Avatar will remain as default texture
-    });
+    };
 
-    // Complete handler for debugging
-    loader.once('complete', () => {
-      console.log('StatusBar: Loader complete event fired');
-    });
-
-    // Load the image
-    console.log('StatusBar: Starting image load with key:', uniqueKey);
-    loader.image(uniqueKey, photoUrl);
-    loader.start();
+    // Start loading the image
+    img.src = photoUrl;
   }
 
   /**
