@@ -91,6 +91,9 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     this.add(this.avatarImage);
 
+    // HTML avatar container for Telegram photos (overlays Phaser canvas)
+    this.htmlAvatarContainer = null;
+
     // Level text below avatar - smaller font
     this.levelText = this.scene.add.text(avatarX, avatarY + 24, `${this.config.userLevel} LVL`, {
       fontFamily: 'LINESeed',
@@ -284,46 +287,75 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     console.log('StatusBar: Attempting to load Telegram photo from:', photoUrl);
 
-    // Use HTML Image element without crossOrigin to bypass CORS
-    // Telegram CDN blocks anonymous cross-origin, but allows simple image display
-    const uniqueKey = `telegram_avatar_${Date.now()}`;
-    const img = new Image();
+    // Create HTML overlay for Telegram photo (avoids CORS issues entirely)
+    // Position it over the Phaser canvas at the avatar location
+    this.htmlAvatarContainer = document.createElement('div');
+    this.htmlAvatarContainer.style.position = 'absolute';
+    this.htmlAvatarContainer.style.width = '42px';
+    this.htmlAvatarContainer.style.height = '42px';
+    this.htmlAvatarContainer.style.borderRadius = '50%';
+    this.htmlAvatarContainer.style.overflow = 'hidden';
+    this.htmlAvatarContainer.style.pointerEvents = 'none'; // Don't block clicks
+    this.htmlAvatarContainer.style.zIndex = '1001'; // Above Phaser canvas
 
-    // DO NOT set crossOrigin - Telegram CDN blocks it
-    // This means we can display the image but can't manipulate pixel data
+    const img = document.createElement('img');
+    img.src = photoUrl;
+    img.style.width = '100%';
+    img.style.height = '100%';
+    img.style.objectFit = 'cover';
 
     img.onload = () => {
-      try {
-        console.log('StatusBar: Image loaded successfully via HTML Image element');
-
-        // Add the loaded image as a Phaser texture
-        // Without crossOrigin, this will work for display but not pixel manipulation
-        if (!this.scene.textures.exists(uniqueKey)) {
-          this.scene.textures.addImage(uniqueKey, img);
-          console.log('StatusBar: Added texture to Phaser:', uniqueKey);
-        }
-
-        // Update the avatar image
-        if (this.avatarImage) {
-          this.avatarImage.setTexture(uniqueKey);
-          console.log('StatusBar: Telegram avatar loaded and applied successfully');
-        } else {
-          console.error('StatusBar: avatarImage is null, cannot set texture');
-        }
-      } catch (error) {
-        console.error('StatusBar: Error processing loaded image:', error);
+      console.log('StatusBar: Telegram avatar loaded successfully');
+      // Hide the Phaser avatar image (we're using HTML overlay now)
+      if (this.avatarImage) {
+        this.avatarImage.setVisible(false);
       }
     };
 
-    img.onerror = (error) => {
-      console.error('StatusBar: Failed to load Telegram avatar via HTML Image');
-      console.error('StatusBar: Photo URL was:', photoUrl);
-      console.error('StatusBar: Error:', error);
-      // Avatar will remain as default texture
+    img.onerror = () => {
+      console.error('StatusBar: Failed to load Telegram avatar');
+      // Keep Phaser avatar visible as fallback
+      if (this.htmlAvatarContainer && this.htmlAvatarContainer.parentNode) {
+        this.htmlAvatarContainer.parentNode.removeChild(this.htmlAvatarContainer);
+      }
     };
 
-    // Start loading the image
-    img.src = photoUrl;
+    this.htmlAvatarContainer.appendChild(img);
+    document.body.appendChild(this.htmlAvatarContainer);
+
+    // Position the HTML avatar over the Phaser canvas
+    this.updateHtmlAvatarPosition();
+
+    // Update position on window resize
+    this.scene.scale.on('resize', () => this.updateHtmlAvatarPosition());
+  }
+
+  /**
+   * Update the position of the HTML avatar overlay to match Phaser coordinates
+   */
+  updateHtmlAvatarPosition() {
+    if (!this.htmlAvatarContainer) return;
+
+    // Get canvas position and scale
+    const canvas = this.scene.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+
+    // StatusBar is positioned at (0, 30) in MainScene
+    // Avatar is at (35, 0) relative to StatusBar
+    const statusBarY = 30;
+    const avatarX = 35;
+    const avatarY = 0;
+
+    // Calculate final position (avatar center relative to canvas)
+    const worldX = avatarX;
+    const worldY = statusBarY + avatarY;
+
+    // Convert to screen coordinates
+    const screenX = canvasRect.left + worldX - 21; // -21 to center (42px / 2)
+    const screenY = canvasRect.top + worldY - 21;
+
+    this.htmlAvatarContainer.style.left = screenX + 'px';
+    this.htmlAvatarContainer.style.top = screenY + 'px';
   }
 
   /**
