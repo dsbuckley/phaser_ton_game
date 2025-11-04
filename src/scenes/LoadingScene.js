@@ -108,12 +108,12 @@ export default class LoadingScene extends Phaser.Scene {
     const scale = Math.max(scaleX, scaleY);
     bg.setScale(scale);
 
-    // Position slider in bottom third of screen
-    const sliderY = screenHeight * 0.75; // 75% down from top = bottom third
+    // Position slider closer to the bottom
+    const sliderY = screenHeight * 0.85; // 85% down from top = near bottom
 
-    // Create smaller loading slider component
+    // Create thinner loading slider component
     const barWidth = Math.min(280, this.cameras.main.width * 0.7); // Smaller width
-    const barHeight = 45; // Smaller height
+    const barHeight = 30; // Thinner height
 
     this.loadingSlider = new LoadingSlider(this, centerX, sliderY, {
       bgTexture: 'slider_bg',
