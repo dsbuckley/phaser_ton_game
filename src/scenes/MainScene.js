@@ -341,17 +341,6 @@ export default class MainScene extends Phaser.Scene {
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
     }
 
-
-    // Telegram user info text
-    if (this.telegramUser) {
-      this.userInfoText = this.add.text(centerX, 180,
-        `User: ${this.telegramUser.username || 'Anonymous'}\nID: ${this.telegramUser.id}`, {
-        fontSize: '16px',
-        fill: '#aaa',
-        align: 'center'
-      }).setOrigin(0.5);
-    }
-
     // Wallet address display (initially hidden)
     this.walletText = this.add.text(centerX, centerY + 100, '', {
       fontSize: '14px',

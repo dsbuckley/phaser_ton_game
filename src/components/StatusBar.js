@@ -72,27 +72,30 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     this.avatarFrame.setStrokeStyle(2, 0xffffff, 1); // 2px white border
     this.add(this.avatarFrame);
 
-    // Avatar image (will be replaced with Telegram photo if available)
-    if (this.scene.textures.exists(this.config.avatarTexture)) {
-      this.avatarImage = this.scene.add.image(avatarX, avatarY, this.config.avatarTexture);
-      this.avatarImage.setDisplaySize(42, 42); // Smaller avatar
-      this.avatarImage.setOrigin(0.5);
+    // Avatar image (always create it, even if texture doesn't exist)
+    // This ensures loadTelegramPhoto() has a valid target
+    const textureToUse = this.scene.textures.exists(this.config.avatarTexture)
+      ? this.config.avatarTexture
+      : '__DEFAULT'; // Phaser's built-in default texture
 
-      // Create circular mask for avatar
-      const maskShape = this.scene.make.graphics();
-      maskShape.fillStyle(0xffffff);
-      maskShape.fillCircle(avatarX, avatarY, 21);
-      const mask = maskShape.createGeometryMask();
-      this.avatarImage.setMask(mask);
+    this.avatarImage = this.scene.add.image(avatarX, avatarY, textureToUse);
+    this.avatarImage.setDisplaySize(42, 42); // Smaller avatar
+    this.avatarImage.setOrigin(0.5);
 
-      this.add(this.avatarImage);
-    }
+    // Create circular mask for avatar using container-relative coordinates
+    const maskShape = this.scene.make.graphics();
+    maskShape.fillStyle(0xffffff);
+    maskShape.fillCircle(avatarX, avatarY, 21);
+    const mask = maskShape.createGeometryMask();
+    this.avatarImage.setMask(mask);
+
+    this.add(this.avatarImage);
 
     // Level text below avatar - smaller font
     this.levelText = this.scene.add.text(avatarX, avatarY + 24, `${this.config.userLevel} LVL`, {
       fontFamily: 'LINESeed',
       fontSize: 18,               // use a number, not a string
-      color: '#ffffff',          // Phaser’s preferred key
+      color: '#ffffff',          // Phaser's preferred key
       fontStyle: 'bold',
       stroke: '#000000',
       strokeThickness: 4,
@@ -274,19 +277,33 @@ export default class StatusBar extends Phaser.GameObjects.Container {
    * @param {string} photoUrl - URL to Telegram profile photo
    */
   loadTelegramPhoto(photoUrl) {
-    // Use Phaser's dynamic texture loading
-    const uniqueKey = `telegram_avatar_${Date.now()}`;
+    if (!photoUrl) return;
 
-    this.scene.load.image(uniqueKey, photoUrl);
-    this.scene.load.once('complete', () => {
+    // Create a new loader instance for late-stage loading
+    // (following LoadingScene pattern - loader must be created in create phase)
+    const uniqueKey = `telegram_avatar_${Date.now()}`;
+    const loader = new Phaser.Loader.LoaderPlugin(this.scene);
+
+    // Success handler
+    loader.once('filecomplete-image-' + uniqueKey, () => {
       if (this.scene.textures.exists(uniqueKey)) {
         // Replace avatar image with loaded photo
         if (this.avatarImage) {
           this.avatarImage.setTexture(uniqueKey);
+          console.log('Telegram avatar loaded successfully');
         }
       }
     });
-    this.scene.load.start();
+
+    // Error handler - fallback to default avatar
+    loader.once('loaderror', (file) => {
+      console.warn('Failed to load Telegram avatar:', file.key, photoUrl);
+      // Avatar will remain as default texture
+    });
+
+    // Load the image
+    loader.image(uniqueKey, photoUrl);
+    loader.start();
   }
 
   /**
