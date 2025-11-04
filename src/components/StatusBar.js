@@ -277,7 +277,12 @@ export default class StatusBar extends Phaser.GameObjects.Container {
    * @param {string} photoUrl - URL to Telegram profile photo
    */
   loadTelegramPhoto(photoUrl) {
-    if (!photoUrl) return;
+    if (!photoUrl) {
+      console.log('StatusBar: No photo URL provided');
+      return;
+    }
+
+    console.log('StatusBar: Attempting to load Telegram photo from:', photoUrl);
 
     // Create a new loader instance for late-stage loading
     // (following LoadingScene pattern - loader must be created in create phase)
@@ -286,22 +291,35 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     // Success handler
     loader.once('filecomplete-image-' + uniqueKey, () => {
+      console.log('StatusBar: Image load complete event fired');
       if (this.scene.textures.exists(uniqueKey)) {
         // Replace avatar image with loaded photo
         if (this.avatarImage) {
           this.avatarImage.setTexture(uniqueKey);
-          console.log('Telegram avatar loaded successfully');
+          console.log('StatusBar: Telegram avatar loaded and applied successfully');
+        } else {
+          console.error('StatusBar: avatarImage is null, cannot set texture');
         }
+      } else {
+        console.error('StatusBar: Texture does not exist after load:', uniqueKey);
       }
     });
 
     // Error handler - fallback to default avatar
     loader.once('loaderror', (file) => {
-      console.warn('Failed to load Telegram avatar:', file.key, photoUrl);
+      console.error('StatusBar: Failed to load Telegram avatar:', file.key);
+      console.error('StatusBar: Photo URL was:', photoUrl);
+      console.error('StatusBar: Error details:', file);
       // Avatar will remain as default texture
     });
 
+    // Complete handler for debugging
+    loader.once('complete', () => {
+      console.log('StatusBar: Loader complete event fired');
+    });
+
     // Load the image
+    console.log('StatusBar: Starting image load with key:', uniqueKey);
     loader.image(uniqueKey, photoUrl);
     loader.start();
   }

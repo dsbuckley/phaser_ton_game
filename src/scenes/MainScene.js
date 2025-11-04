@@ -358,6 +358,10 @@ export default class MainScene extends Phaser.Scene {
     let avatarUrl = null;
     if (window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) {
       avatarUrl = window.Telegram.WebApp.initDataUnsafe.user.photo_url;
+      console.log('Telegram photo URL found:', avatarUrl);
+    } else {
+      console.log('No Telegram photo URL available');
+      console.log('Telegram WebApp data:', window.Telegram?.WebApp?.initDataUnsafe);
     }
 
     // Create status bar with initial values - positioned at very top
