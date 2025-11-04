@@ -294,25 +294,28 @@ export default class MainScene extends Phaser.Scene {
         scale: { min: 0.15, max: 0.25 },
         alpha: 0.5, // More transparent (far away)
         speed: { min: 8, max: 12 }, // Very slow (far away)
-        yPosition: { min: 80, max: 140 } // Upper sky area
+        yPosition: { min: 50, max: 180 } // Expanded range - higher and lower
       },
       {
         depth: -40, // Middle distance
         scale: { min: 0.25, max: 0.35 },
         alpha: 0.65, // Medium transparency
         speed: { min: 12, max: 18 }, // Slow
-        yPosition: { min: 100, max: 180 }
+        yPosition: { min: 80, max: 220 } // Expanded range
       },
       {
         depth: -30, // Closer
         scale: { min: 0.35, max: 0.5 },
         alpha: 0.8, // Less transparent
         speed: { min: 18, max: 25 }, // Moderate speed
-        yPosition: { min: 120, max: 220 }
+        yPosition: { min: 100, max: 280 } // Expanded range
       }
     ];
 
-    // Create initial clouds and set up continuous spawning
+    // Spawn initial clouds immediately across the screen (visible on load)
+    this.spawnInitialClouds();
+
+    // Create continuous spawning timer
     this.cloudTimer = this.time.addEvent({
       delay: 8000, // New cloud every 8 seconds (much slower spawning)
       callback: () => {
@@ -323,16 +326,23 @@ export default class MainScene extends Phaser.Scene {
       },
       loop: true
     });
+  }
 
-    // Spawn 2-3 initial clouds spread out
-    for (let i = 0; i < 3; i++) {
-      this.time.delayedCall(i * 3000, () => {
-        this.createSingleCloud();
-      });
+  spawnInitialClouds() {
+    // Spawn 4-5 clouds immediately at random positions across the screen
+    const screenWidth = this.cameras.main.width;
+    const numClouds = Phaser.Math.Between(4, 5);
+
+    for (let i = 0; i < numClouds; i++) {
+      // Random X position across the entire screen width
+      const startX = Phaser.Math.Between(0, screenWidth);
+
+      // Create cloud at random screen position (not off-screen)
+      this.createSingleCloud(startX);
     }
   }
 
-  createSingleCloud() {
+  createSingleCloud(startX = null) {
     const screenWidth = this.cameras.main.width;
 
     // Choose random cloud image (1, 2, or 3)
@@ -348,8 +358,10 @@ export default class MainScene extends Phaser.Scene {
     // Random Y position within layer range
     const y = Phaser.Math.Between(layer.yPosition.min, layer.yPosition.max);
 
-    // Start off-screen to the left
-    const startX = -200;
+    // If startX not provided, start off-screen to the left
+    if (startX === null) {
+      startX = -200;
+    }
 
     // Create cloud sprite
     const cloud = this.add.image(startX, y, cloudKey);
