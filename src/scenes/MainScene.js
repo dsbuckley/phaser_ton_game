@@ -53,6 +53,9 @@ export default class MainScene extends Phaser.Scene {
     // Create treasure chest animation
     this.createChestAnimation();
 
+    // Create palm tree animation
+    this.createPalmTreeAnimation();
+
     // Create UI (assets and fonts already loaded by LoadingScene)
     this.createUI();
 
@@ -230,6 +233,24 @@ export default class MainScene extends Phaser.Scene {
     });
   }
 
+  createPalmTreeAnimation() {
+    // Build frame array for animation (all 38 frames)
+    const frames = [];
+    for (let i = 1; i <= 38; i++) {
+      const frameNum = String(i).padStart(3, '0');
+      frames.push({ key: `palm_${frameNum}` });
+    }
+
+    // Create swaying animation (plays slowly, forward then reverse, loops continuously)
+    this.anims.create({
+      key: 'palm_tree_sway',
+      frames: frames,
+      frameRate: 15, // 38 frames at 6fps = 6.3 seconds per loop (very slow motion)
+      repeat: -1, // Loop forever
+      yoyo: true // Play forward then reverse for smooth back-and-forth motion
+    });
+  }
+
   createUI() {
     // Display player sprite centered
     const centerX = this.cameras.main.width / 2;
@@ -350,6 +371,15 @@ export default class MainScene extends Phaser.Scene {
     } else {
       // Fallback: create a simple circle if image doesn't load
       this.player = this.add.circle(centerX, centerY - 100, 30, 0x00ff00);
+    }
+
+    // Create palm tree sprite (starts with first frame, positioned on right side)
+    if (this.textures.exists('palm_001')) {
+      this.palmTree = this.add.sprite(centerX + 125, centerY - 10, 'palm_001');
+      this.palmTree.setScale(1.3); // Scale up to take up most of the screen
+
+      // Start the swaying animation immediately
+      this.palmTree.play('palm_tree_sway');
     }
 
     // Wallet address display (initially hidden)
