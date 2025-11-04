@@ -61,7 +61,7 @@ export default class LoadingScene extends Phaser.Scene {
     });
 
     // Load all game assets
-    loader.image('background', '/assets/Demo/Demo_Background/Background01.png');
+    loader.image('background', '/assets/main_scene.webp');
     loader.image('btn_green', '/assets/Components/Button/Button01_Demo_Green.png');
 
     // Load treasure chest animation frames (every other frame: 1, 3, 5, ... 37)
@@ -111,24 +111,22 @@ export default class LoadingScene extends Phaser.Scene {
     // Position slider closer to the bottom
     const sliderY = screenHeight * 0.85; // 85% down from top = near bottom
 
-    // Create thinner loading slider component
+    // Create loading slider component with better proportions
     const barWidth = Math.min(280, this.cameras.main.width * 0.7); // Smaller width
-    const barHeight = 30; // Thinner height
+    const barHeight = 40; // Better height for NineSlice scaling
 
     this.loadingSlider = new LoadingSlider(this, centerX, sliderY, {
       bgTexture: 'slider_bg',
       fillTexture: 'slider_fill_magenta',
       width: barWidth,
       height: barHeight,
-      textFormat: 'fraction', // Shows "999 / 999" format
-      fontFamily: 'LINESeed',
-      fontSize: '16px',
-      textColor: '#ffffff',
-      textStroke: '#000000',
-      textStrokeThickness: 3
+      showText: false // Hide text overlay
     });
 
     this.add.existing(this.loadingSlider);
+
+    // Scale down for thinner appearance while maintaining quality
+    this.loadingSlider.setScale(0.75);
 
     // Set initial progress to 0
     this.loadingSlider.setProgress(0, false);
