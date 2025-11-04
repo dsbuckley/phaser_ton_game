@@ -992,20 +992,20 @@ export default class MainScene extends Phaser.Scene {
     const chestsOpened = this.totalChestsOpenedState.get();
     this.totalChestsOpenedState.set(chestsOpened + 1);
 
-    // Play treasure chest sound
-    this.sound.play('chest_sound');
+    // Determine payout size (10% chance for big payout)
+    const isBigPayout = Math.random() < 0.20;
+    const coinReward = isBigPayout
+      ? Phaser.Math.Between(25, 50)  // Big payout
+      : Phaser.Math.Between(1, 9);   // Normal payout
+
+    // Play treasure chest sound (different sound for big payouts)
+    this.sound.play(isBigPayout ? 'chest_sound_big' : 'chest_sound');
 
     // Visual feedback
     //this.connectButtonText.setText('Opening...');
 
     // Restart chest opening animation (restarts if already playing)
     this.player.play('chest_open', true);
-
-    // 20% chance for big payout (20-50 coins), 80% chance for normal payout (1-9 coins)
-    const isBigPayout = Math.random() < 0.10;
-    const coinReward = isBigPayout
-      ? Phaser.Math.Between(20, 50)  // Big payout
-      : Phaser.Math.Between(1, 9);   // Normal payout
 
     // Trigger coin confetti after 300ms delay with the coin reward amount
     this.time.delayedCall(300, () => {
