@@ -3,7 +3,6 @@ import { TonConnectUI } from '@tonconnect/ui';
 import { createClient } from '@supabase/supabase-js';
 import { withPersistentState } from '../utils/persistentState.js';
 import StatusBar from '../components/StatusBar.js';
-import BatteryBar from '../components/BatteryBar.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -197,7 +196,9 @@ export default class MainScene extends Phaser.Scene {
           if (currentBattery < 100) {
             const newBattery = currentBattery + 1;
             this.batteryState.set(newBattery);
-            this.batteryBar.setBattery(newBattery, 100, true);
+
+            // Update StatusBar energy display
+            this.statusBar.setResource('energy', newBattery, true);
 
             // Update timestamp for offline regeneration tracking
             this.lastBatteryUpdateTime.set(Date.now());
@@ -637,7 +638,7 @@ export default class MainScene extends Phaser.Scene {
       userLevel: this.userLevelState.get(),
       resources: [
         { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get(), width: 95 },
-        { key: 'tickets', icon: 'statusbar_ticket', value: this.ticketsState.get(), width: 65 },
+        { key: 'energy', icon: 'statusbar_energy', value: this.batteryState.get(), width: 65 },
         { key: 'gems', icon: 'statusbar_gem', value: this.gemsState.get(), width: 65 }
       ],
       onSettingsClick: () => {
@@ -652,43 +653,18 @@ export default class MainScene extends Phaser.Scene {
     this.statusBar.setScrollFactor(0);
     this.statusBar.setDepth(1000); // Ensure it's always on top
 
-    // Create battery bar below the status bar
-    this.createBatteryBar();
+    // Battery bar removed - energy now shown in status bar
+    // this.createBatteryBar();
   }
 
   createBatteryBar() {
-    // Calculate responsive width (span most of the screen with margins)
-    const screenWidth = this.cameras.main.width;
-    const barWidth = Math.min(screenWidth - 40, 400); // 20px margin on each side, max 400px
-    const barHeight = 30; // Further reduced height for thinner bar
+    // Battery bar disabled - energy now displays in the status bar
+    // Keeping method for backwards compatibility but not creating the visual component
 
-    // Position below the status bar (status bar is at y=30, height ~60px)
-    const barX = screenWidth / 2;
-    const barY = 90; // Below status bar with some spacing
-
-    // Load current battery value from persistent state
-    const currentBattery = this.batteryState.get();
-
-    this.batteryBar = new BatteryBar(this, barX, barY, {
-      width: barWidth,
-      height: barHeight,
-      iconTexture: 'battery_icon',
-      fillTexture: 'slider_fill_green',
-      bgTexture: 'slider_bg',
-      currentValue: currentBattery,
-      maxValue: 100,
-      iconSize: 45,
-      iconOffsetX: -10, // Moved further left to edge of bar
-      showText: false, // Hide the numbers
-      fontSize: '18px', // Smaller font for thinner bar
-      textStrokeThickness: 3
-    });
-
-    this.add.existing(this.batteryBar);
-
-    // Fixed position at top
-    this.batteryBar.setScrollFactor(0);
-    this.batteryBar.setDepth(999); // Below status bar but above game content
+    // Create a dummy batteryBar object to prevent errors in regeneration code
+    this.batteryBar = {
+      setBattery: () => {} // No-op function
+    };
   }
 
   getTelegramUserData() {
@@ -958,10 +934,10 @@ export default class MainScene extends Phaser.Scene {
     // Record the time of this click for battery regeneration logic
     this.lastClickTime = this.time.now;
 
-    // Check if battery is too low (stop at 6/100)
+    // Check if battery is too low (stop at 0/100)
     const currentBattery = this.batteryState.get();
-    if (currentBattery <= 6) {
-      console.log('Battery too low! Need more than 6 energy to open chest.');
+    if (currentBattery <= 0) {
+      console.log('Battery too low! Need more than 0 energy to open chest.');
       // TODO: Show "Low Energy" message to user
       return;
     }
@@ -993,7 +969,9 @@ export default class MainScene extends Phaser.Scene {
     // Decrease battery by 1
     const newBattery = currentBattery - 1;
     this.batteryState.set(newBattery);
-    this.batteryBar.setBattery(newBattery, 100, true);
+
+    // Update StatusBar energy display
+    this.statusBar.setResource('energy', newBattery, true);
 
     // Update timestamp for offline regeneration tracking
     this.lastBatteryUpdateTime.set(Date.now());
