@@ -18,7 +18,7 @@ export default class MainScene extends Phaser.Scene {
     this.batteryRegenTimer = null;
   }
 
-  create() {
+  async create() {
     // Initialize persistent coin state using phaser-hooks
     // This will automatically save to localStorage and persist across sessions
     this.coinsState = withPersistentState(this, 'totalCoins', 0);
@@ -29,11 +29,16 @@ export default class MainScene extends Phaser.Scene {
     // Initialize timestamp tracking for offline regeneration
     this.lastBatteryUpdateTime = withPersistentState(this, 'lastBatteryUpdateTime', Date.now());
 
+    // Initialize persistent state for tickets and gems (now tracked)
+    this.ticketsState = withPersistentState(this, 'totalTickets', 0);
+    this.gemsState = withPersistentState(this, 'totalGems', 0);
+    this.userLevelState = withPersistentState(this, 'userLevel', 1);
+    this.totalChestsOpenedState = withPersistentState(this, 'totalChestsOpened', 0);
+
     // Calculate offline energy regeneration (will show notification after UI is created)
     this.offlineEnergyGained = this.calculateOfflineRegeneration();
 
     // Initialize Supabase client
-    // TODO: Replace with your actual Supabase credentials from environment variables
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
     const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
 
@@ -41,6 +46,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Get Telegram WebApp user data
     this.getTelegramUserData();
+
+    // Initialize user in database and load stats from Supabase
+    await this.initializeUser();
 
     // Create treasure chest animation
     this.createChestAnimation();
@@ -55,6 +63,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Start battery regeneration timer
     this.startBatteryRegeneration();
+
+    // Start auto-save timer (saves stats to Supabase every 5 seconds)
+    this.startAutoSave();
   }
 
   calculateOfflineRegeneration() {
@@ -365,15 +376,15 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Create status bar with initial values - positioned at very top
-    // Load persisted coin count from localStorage via phaser-hooks
+    // Load persisted values from localStorage/Supabase
     this.statusBar = new StatusBar(this, 0, 30, {
       avatarTexture: 'avatar_default',
       avatarUrl: avatarUrl,
-      userLevel: 1, // TODO: Get from user data/database
+      userLevel: this.userLevelState.get(),
       resources: [
         { key: 'coins', icon: 'statusbar_coin', value: this.coinsState.get(), width: 95 },
-        { key: 'tickets', icon: 'statusbar_ticket', value: 0, width: 65 },
-        { key: 'gems', icon: 'statusbar_gem', value: 0, width: 65 }
+        { key: 'tickets', icon: 'statusbar_ticket', value: this.ticketsState.get(), width: 65 },
+        { key: 'gems', icon: 'statusbar_gem', value: this.gemsState.get(), width: 65 }
       ],
       onSettingsClick: () => {
         console.log('Settings button clicked');
@@ -488,6 +499,180 @@ export default class MainScene extends Phaser.Scene {
     return true;
   }
 
+  async initializeUser() {
+    if (!this.supabase || !this.telegramUser) {
+      console.warn('Missing Supabase or Telegram user data, skipping user initialization');
+      return;
+    }
+
+    try {
+      // Get Telegram photo URL if available
+      let photoUrl = null;
+      if (window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) {
+        photoUrl = window.Telegram.WebApp.initDataUnsafe.user.photo_url;
+      }
+
+      // Step 1: Upsert user to users table (creates if new, updates if exists)
+      const userData = {
+        telegram_id: this.telegramUser.id,
+        username: this.telegramUser.username,
+        profile_photo_url: photoUrl,
+        wallet_address: this.walletAddress || null
+      };
+
+      console.log('Initializing user in database:', userData);
+
+      const { data: user, error: userError } = await this.supabase
+        .from('users')
+        .upsert(userData, {
+          onConflict: 'telegram_id',
+          ignoreDuplicates: false
+        })
+        .select()
+        .single();
+
+      if (userError) {
+        throw userError;
+      }
+
+      console.log('User initialized successfully:', user);
+
+      // Step 2: Load user stats from user_stats table
+      const { data: stats, error: statsError } = await this.supabase
+        .from('user_stats')
+        .select('*')
+        .eq('telegram_id', this.telegramUser.id)
+        .single();
+
+      if (statsError && statsError.code !== 'PGRST116') {
+        // PGRST116 = no rows returned, which is expected for new users
+        throw statsError;
+      }
+
+      if (stats) {
+        // User has existing stats - load them into the game
+        console.log('Loading existing stats from database:', stats);
+
+        this.coinsState.set(stats.coins || 0);
+        this.ticketsState.set(stats.tickets || 0);
+        this.gemsState.set(stats.gems || 0);
+        this.batteryState.set(stats.energy || 100);
+        this.userLevelState.set(stats.user_level || 1);
+        this.totalChestsOpenedState.set(stats.total_chests_opened || 0);
+
+        // Calculate server-side offline regeneration using last_energy_update
+        if (stats.last_energy_update && stats.energy < 100) {
+          const lastUpdate = new Date(stats.last_energy_update).getTime();
+          const currentTime = Date.now();
+          const elapsedSeconds = (currentTime - lastUpdate) / 1000;
+
+          // Regeneration rate: 3.3 energy per second
+          const energyGained = Math.floor(elapsedSeconds * 3.3);
+          const newEnergy = Math.min(stats.energy + energyGained, 100);
+
+          if (energyGained > 0) {
+            console.log(`Server-calculated offline regeneration: +${newEnergy - stats.energy} energy`);
+            this.batteryState.set(newEnergy);
+            this.offlineEnergyGained = newEnergy - stats.energy;
+          }
+        }
+
+        console.log('Stats loaded successfully from database');
+      } else {
+        // New user - create initial stats row using localStorage defaults
+        console.log('New user detected, creating initial stats row');
+
+        const initialStats = {
+          telegram_id: this.telegramUser.id,
+          coins: this.coinsState.get(),
+          tickets: this.ticketsState.get(),
+          gems: this.gemsState.get(),
+          energy: this.batteryState.get(),
+          user_level: this.userLevelState.get(),
+          total_chests_opened: this.totalChestsOpenedState.get(),
+          last_energy_update: new Date().toISOString()
+        };
+
+        const { data: newStats, error: createError } = await this.supabase
+          .from('user_stats')
+          .insert(initialStats)
+          .select()
+          .single();
+
+        if (createError) {
+          throw createError;
+        }
+
+        console.log('Initial stats created successfully:', newStats);
+      }
+
+    } catch (error) {
+      console.error('Failed to initialize user:', error);
+      console.log('Continuing with localStorage values as fallback');
+      // Don't throw - game should continue with localStorage values
+    }
+  }
+
+  async saveStatsToSupabase() {
+    if (!this.supabase || !this.telegramUser) {
+      console.warn('Missing Supabase or Telegram user data, skipping stats save');
+      return;
+    }
+
+    try {
+      const statsData = {
+        telegram_id: this.telegramUser.id,
+        coins: this.coinsState.get(),
+        tickets: this.ticketsState.get(),
+        gems: this.gemsState.get(),
+        energy: this.batteryState.get(),
+        user_level: this.userLevelState.get(),
+        total_chests_opened: this.totalChestsOpenedState.get(),
+        last_energy_update: new Date().toISOString()
+      };
+
+      const { error } = await this.supabase
+        .from('user_stats')
+        .upsert(statsData, {
+          onConflict: 'telegram_id',
+          ignoreDuplicates: false
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('Stats saved to Supabase:', statsData);
+
+    } catch (error) {
+      console.error('Failed to save stats to Supabase:', error);
+      // Don't throw - localStorage backup still exists
+    }
+  }
+
+  startAutoSave() {
+    // Save stats to Supabase every 5 seconds
+    this.autoSaveTimer = this.time.addEvent({
+      delay: 5000, // 5 seconds
+      callback: () => {
+        this.saveStatsToSupabase();
+      },
+      loop: true
+    });
+
+    // Also save when scene shuts down (user closes game)
+    this.events.once('shutdown', () => {
+      console.log('Scene shutting down, saving final stats...');
+      this.saveStatsToSupabase();
+    });
+
+    // Also save when scene is destroyed
+    this.events.once('destroy', () => {
+      console.log('Scene destroyed, saving final stats...');
+      this.saveStatsToSupabase();
+    });
+  }
+
   async initTonConnect() {
     try {
       // Initialize TON Connect UI
@@ -559,6 +744,10 @@ export default class MainScene extends Phaser.Scene {
     // Update timestamp for offline regeneration tracking
     this.lastBatteryUpdateTime.set(Date.now());
 
+    // Increment total chests opened counter
+    const chestsOpened = this.totalChestsOpenedState.get();
+    this.totalChestsOpenedState.set(chestsOpened + 1);
+
     // Play treasure chest sound
     this.sound.play('chest_sound');
 
@@ -583,6 +772,9 @@ export default class MainScene extends Phaser.Scene {
     this.time.delayedCall(500, () => {
       this.player.play('chest_close', true);
     });
+
+    // Immediately save stats to Supabase after chest open (don't wait for auto-save)
+    this.saveStatsToSupabase();
 
     // Reset button text after animation completes
     // this.time.delayedCall(300, () => {

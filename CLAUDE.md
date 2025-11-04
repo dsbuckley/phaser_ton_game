@@ -128,6 +128,19 @@ statusBar.setLevel(5);
 **Spacing Tuning:** 15px gap provides optimal balance between compactness and readability
 **Methods:** `setResource()`, `getResource()`, `setLevel()`, `formatNumber()`, `loadTelegramPhoto()`
 
+**Telegram Avatar Loading:**
+The StatusBar automatically loads and displays Telegram user profile photos using an HTML overlay approach to bypass CORS restrictions:
+
+- **CORS Workaround:** Telegram's CDN (`cdn1.telesco.pe`) blocks cross-origin canvas access, preventing direct Phaser texture loading
+- **Solution:** Creates an HTML `<div>` with `<img>` positioned absolutely over the Phaser canvas
+- **Circular Masking:** Uses CSS `border-radius: 50%` and `overflow: hidden` for circular avatar display
+- **Positioning:** Automatically calculates screen coordinates from Phaser world coordinates
+- **Responsive:** Updates position on window resize via `scale.on('resize')` event
+- **Fallback:** If photo fails to load, keeps default Phaser avatar visible
+- **Implementation:** Pass `avatarUrl: window.Telegram.WebApp.initDataUnsafe.user.photo_url` to constructor
+
+This pattern is recommended for any external user-generated images (avatars, photos) that may have CORS restrictions.
+
 ### BatteryBar (`src/components/BatteryBar.js`)
 Energy/stamina bar with battery icon, auto-regeneration, and persistent state.
 
