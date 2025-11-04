@@ -284,19 +284,20 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     console.log('StatusBar: Attempting to load Telegram photo from:', photoUrl);
 
-    // Use HTML Image element to bypass CORS issues with Telegram CDN redirects
-    // Phaser's loader gets blocked by CORS, but browser <img> tags work fine
+    // Use HTML Image element without crossOrigin to bypass CORS
+    // Telegram CDN blocks anonymous cross-origin, but allows simple image display
     const uniqueKey = `telegram_avatar_${Date.now()}`;
     const img = new Image();
 
-    // Enable cross-origin for the image (allows us to use it in canvas)
-    img.crossOrigin = 'anonymous';
+    // DO NOT set crossOrigin - Telegram CDN blocks it
+    // This means we can display the image but can't manipulate pixel data
 
     img.onload = () => {
       try {
         console.log('StatusBar: Image loaded successfully via HTML Image element');
 
         // Add the loaded image as a Phaser texture
+        // Without crossOrigin, this will work for display but not pixel manipulation
         if (!this.scene.textures.exists(uniqueKey)) {
           this.scene.textures.addImage(uniqueKey, img);
           console.log('StatusBar: Added texture to Phaser:', uniqueKey);
