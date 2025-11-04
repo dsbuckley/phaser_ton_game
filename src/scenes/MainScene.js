@@ -1038,6 +1038,9 @@ export default class MainScene extends Phaser.Scene {
       // Create coin sprite
       const coin = this.physics.add.sprite(chestX, chestY, 'statusbar_coin');
 
+      // Set depth to render in front of palm tree (palm tree is at depth 100)
+      coin.setDepth(150);
+
       // Random scale for variety
       const scale = Phaser.Math.FloatBetween(0.3, 0.5);
       coin.setScale(scale);
@@ -1087,7 +1090,7 @@ export default class MainScene extends Phaser.Scene {
       strokeThickness: 6,
       padding: { x: 20, y: 20 },
       resolution: 2
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(150); // Render in front of palm tree
 
     // Animate text floating upward and fading out
     this.tweens.add({
