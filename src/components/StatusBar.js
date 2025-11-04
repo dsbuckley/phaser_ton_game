@@ -96,32 +96,31 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     // HTML avatar container for Telegram photos (overlays Phaser canvas)
     this.htmlAvatarContainer = null;
 
-    // Level circle and username text below avatar
-    const textY = avatarY + 34;
+    // Level circle at bottom-right of avatar
+    const levelCircleRadius = 10;
+    const levelCircleX = avatarX + -25; // Bottom-right corner of avatar
+    const levelCircleY = avatarY + 17;
 
-    // Create level number circle (positioned to the left of username)
-    const levelCircleRadius = 12;
-    const levelCircleX = avatarX - 10; // Position left of center
-
-    this.levelCircle = this.scene.add.circle(levelCircleX, textY, levelCircleRadius, 0x3498db);
+    this.levelCircle = this.scene.add.circle(levelCircleX, levelCircleY, levelCircleRadius, 0x3498db);
     this.levelCircle.setStrokeStyle(2, 0xffffff, 1);
     this.add(this.levelCircle);
 
     // Level number text inside circle
-    this.levelNumberText = this.scene.add.text(levelCircleX, textY, `${this.config.userLevel}`, {
+    this.levelNumberText = this.scene.add.text(levelCircleX, levelCircleY, `${this.config.userLevel}`, {
       fontFamily: 'LINESeed',
-      fontSize: 14,
+      fontSize: 12,
       color: '#ffffff',
       fontStyle: 'bold',
       resolution: window.devicePixelRatio
     }).setOrigin(0.5);
     this.add(this.levelNumberText);
 
-    // Username text (positioned to the right of circle)
-    const usernameX = avatarX + 5; // Slightly right of center
-    this.usernameText = this.scene.add.text(usernameX, textY, `${this.config.username}`, {
+    // Username text below avatar, left-aligned with avatar left edge
+    const usernameX = avatarX - 21; // Left edge of avatar (avatarX - radius)
+    const usernameY = avatarY + 30; // Below avatar
+    this.usernameText = this.scene.add.text(usernameX, usernameY, `${this.config.username}`, {
       fontFamily: 'LINESeed',
-      fontSize: 16,
+      fontSize: 14,
       color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
