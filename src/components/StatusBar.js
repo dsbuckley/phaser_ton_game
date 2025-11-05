@@ -31,6 +31,9 @@ export default class StatusBar extends Phaser.GameObjects.Container {
   constructor(scene, x, y, config = {}) {
     super(scene, x, y);
 
+    // Store Y position for HTML avatar positioning
+    this.statusBarY = config.statusBarY || y;
+
     // Store configuration
     this.config = {
       avatarTexture: config.avatarTexture || 'avatar_default',
@@ -363,15 +366,14 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const canvas = this.scene.game.canvas;
     const canvasRect = canvas.getBoundingClientRect();
 
-    // StatusBar is positioned at (0, 140) in MainScene
+    // Use stored StatusBar Y position (varies based on full-screen mode)
     // Avatar is at (35, 0) relative to StatusBar
-    const statusBarY = 120;
     const avatarX = 35;
     const avatarY = 0;
 
     // Calculate final position (avatar center relative to canvas)
     const worldX = avatarX;
-    const worldY = statusBarY + avatarY;
+    const worldY = this.statusBarY + avatarY;
 
     // Convert to screen coordinates
     const screenX = canvasRect.left + worldX - 21; // -21 to center (42px / 2)

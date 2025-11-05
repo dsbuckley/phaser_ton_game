@@ -641,9 +641,13 @@ export default class MainScene extends Phaser.Scene {
       console.log('Telegram WebApp data:', window.Telegram?.WebApp?.initDataUnsafe);
     }
 
-    // Create status bar with initial values - positioned near top
+    // Create status bar with initial values - positioned based on full-screen mode
+    // Detect full-screen mode using Telegram WebApp API
+    const isFullscreen = window.Telegram?.WebApp?.isExpanded || false;
+    const statusBarY = isFullscreen ? 140 : 60;
+
     // Load persisted values from localStorage/Supabase
-    this.statusBar = new StatusBar(this, 0, 120, {
+    this.statusBar = new StatusBar(this, 0, statusBarY, {
       avatarTexture: 'avatar_default',
       avatarUrl: avatarUrl,
       username: this.telegramUser?.username || 'Player',
@@ -656,7 +660,8 @@ export default class MainScene extends Phaser.Scene {
       onSettingsClick: () => {
         console.log('Settings button clicked');
         // TODO: Open settings menu/popup
-      }
+      },
+      statusBarY: statusBarY // Pass Y position for HTML avatar positioning
     });
 
     this.add.existing(this.statusBar);
