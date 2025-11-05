@@ -2,14 +2,18 @@ import Phaser from 'phaser';
 import LoadingScene from './scenes/LoadingScene.js';
 import MainScene from './scenes/MainScene.js';
 
+// Get portrait dimensions even if device starts in landscape
+const portraitWidth = window.innerWidth > window.innerHeight ? window.innerHeight : window.innerWidth;
+const portraitHeight = window.innerWidth > window.innerHeight ? window.innerWidth : window.innerHeight;
+
 const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: window.innerWidth,
-  height: window.innerHeight,
+  width: portraitWidth,
+  height: portraitHeight,
   scale: {
-    mode: Phaser.Scale.RESIZE,  // Resize to window
-    autoCenter: Phaser.Scale.NO_CENTER
+    mode: Phaser.Scale.NONE,  // No auto-resize - locked to portrait
+    autoCenter: Phaser.Scale.CENTER_BOTH  // Center on screen
   },
   physics: {
     default: 'arcade',
