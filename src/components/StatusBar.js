@@ -363,9 +363,9 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const canvas = this.scene.game.canvas;
     const canvasRect = canvas.getBoundingClientRect();
 
-    // StatusBar is positioned at (0, 30) in MainScene
+    // StatusBar is positioned at (0, 140) in MainScene
     // Avatar is at (35, 0) relative to StatusBar
-    const statusBarY = 30;
+    const statusBarY = 140;
     const avatarX = 35;
     const avatarY = 0;
 

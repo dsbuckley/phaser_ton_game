@@ -643,7 +643,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create status bar with initial values - positioned near top
     // Load persisted values from localStorage/Supabase
-    this.statusBar = new StatusBar(this, 0, 110, {
+    this.statusBar = new StatusBar(this, 0, 140, {
       avatarTexture: 'avatar_default',
       avatarUrl: avatarUrl,
       username: this.telegramUser?.username || 'Player',
