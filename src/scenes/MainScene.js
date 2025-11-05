@@ -999,7 +999,7 @@ export default class MainScene extends Phaser.Scene {
       : Phaser.Math.Between(1, 9);   // Normal payout
 
     // Play treasure chest sound (different sound for big payouts)
-    this.sound.play(isBigPayout ? 'chest_sound_big' : 'chest_sound');
+    this.sound.play(isBigPayout ? 'chest_sound' : 'chest_sound_big');
 
     // Visual feedback
     //this.connectButtonText.setText('Opening...');
