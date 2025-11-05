@@ -1009,7 +1009,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Trigger coin confetti after 300ms delay with the coin reward amount
     this.time.delayedCall(300, () => {
-      this.createCoinConfetti(coinReward);
+      this.createCoinConfetti(coinReward, isBigPayout);
     });
 
     // Play closing animation after opening completes
@@ -1026,7 +1026,7 @@ export default class MainScene extends Phaser.Scene {
     // });
   }
 
-  createCoinConfetti(coinAmount) {
+  createCoinConfetti(coinAmount, isBigPayout = false) {
     // Get chest position
     const chestX = this.player.x;
     const chestY = this.player.y;
@@ -1047,7 +1047,10 @@ export default class MainScene extends Phaser.Scene {
 
       // Set random physics velocities for burst effect
       const velocityX = Phaser.Math.Between(-200, 200); // Horizontal spread
-      const velocityY = Phaser.Math.Between(-400, -600); // Upward burst
+      // Big payouts fly much higher
+      const velocityY = isBigPayout
+        ? Phaser.Math.Between(-700, -900) // Big payout: launch higher
+        : Phaser.Math.Between(-400, -600); // Normal: same as before
       coin.setVelocity(velocityX, velocityY);
 
       // Apply gravity for realistic arc
@@ -1093,22 +1096,24 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Create floating "+X" text that rises and fades
+    // Big payouts get larger, golden text
     const floatingText = this.add.text(chestX, chestY, `+${coinAmount}`, {
       fontFamily: 'Tilt Warp',
-      fontSize: '48px',
-      fill: '#FFFFFF', // White color
+      fontSize: isBigPayout ? '72px' : '48px', // Larger for big payouts
+      fill: isBigPayout ? '#FFD700' : '#FFFFFF', // Golden for big payouts, white for normal
       stroke: '#000000',
-      strokeThickness: 6,
+      strokeThickness: isBigPayout ? 8 : 6, // Thicker stroke for big payouts
       padding: { x: 20, y: 20 },
       resolution: 2
     }).setOrigin(0.5).setDepth(150); // Render in front of palm tree
 
     // Animate text floating upward and fading out
+    // Big payouts go higher and stay longer
     this.tweens.add({
       targets: floatingText,
-      y: chestY - 250, // Float up 250 pixels
+      y: isBigPayout ? chestY - 450 : chestY - 250, // Big payouts float much higher
       alpha: 0, // Fade to transparent
-      duration: 1000, // 1 second (faster)
+      duration: isBigPayout ? 2000 : 1000, // Big payouts stay 2 seconds, normal 1 second
       ease: 'Sine.easeOut', // Smooth deceleration
       onComplete: () => floatingText.destroy()
     });
