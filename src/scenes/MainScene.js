@@ -1064,7 +1064,18 @@ export default class MainScene extends Phaser.Scene {
         scaleX: scale,
         scaleY: scale,
         duration: 150,
-        ease: 'Back.out'
+        ease: 'Back.out',
+        onComplete: () => {
+          // Zoom towards camera effect - scale up 2.5x to simulate approaching
+          this.tweens.add({
+            targets: coin,
+            scaleX: scale * 2.5,
+            scaleY: scale * 2.5,
+            duration: 1000,
+            ease: 'Power2.easeIn',
+            delay: 200
+          });
+        }
       });
 
       // Fade out and destroy after 2 seconds
