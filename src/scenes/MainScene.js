@@ -127,7 +127,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create energy icon (matching StatusBar energy icon)
     const icon = this.add.image(-100, -5, 'statusbar_energy');
-    icon.setScale(0.25); // Much smaller icon
+    icon.setScale(0.85); // Larger icon for better visibility
 
     // Create main text
     const mainText = this.add.text(10, -8, `+${energyGained} Energy`, {
