@@ -113,28 +113,8 @@ export default class MainScene extends Phaser.Scene {
   }
 
   setupOrientationHandling() {
-    // Store initial portrait dimensions and lock them
-    this.lockedWidth = window.innerWidth;
-    this.lockedHeight = window.innerHeight;
-
-    // If starting in landscape, swap dimensions to get portrait size
-    if (window.innerWidth > window.innerHeight) {
-      this.lockedWidth = window.innerHeight;
-      this.lockedHeight = window.innerWidth;
-    }
-
-    // Set fixed size immediately
-    this.scale.resize(this.lockedWidth, this.lockedHeight);
-
-    // Prevent any further resizing by overriding the resize method
-    const originalResize = this.scale.resize.bind(this.scale);
-    this.scale.resize = () => {
-      // Always use locked dimensions, ignore any resize requests
-      originalResize(this.lockedWidth, this.lockedHeight);
-    };
-
-    // Also disable Phaser's automatic resize handling
-    this.scale.stopListeners();
+    // Game canvas is locked to portrait dimensions - do nothing
+    // Phaser Scale.NONE with CENTER_BOTH handles everything
   }
 
   showOfflineRegenNotification(energyGained) {
