@@ -115,44 +115,31 @@ export default class MainScene extends Phaser.Scene {
   setupOrientationHandling() {
     // Store reference to orientation warning overlay
     this.orientationWarning = null;
+    // Store portrait dimensions to restore later
+    this.portraitWidth = null;
+    this.portraitHeight = null;
 
     // Listen for orientation changes
     this.scale.on('orientationchange', (orientation) => {
       if (orientation === Phaser.Scale.Orientation.LANDSCAPE) {
+        // Save portrait dimensions before landscape switch
+        if (!this.portraitWidth) {
+          this.portraitWidth = this.scale.width;
+          this.portraitHeight = this.scale.height;
+        }
         this.showLandscapeWarning();
       } else if (orientation === Phaser.Scale.Orientation.PORTRAIT) {
         this.hideLandscapeWarning();
+        // Force scene restart to restore proper layout
+        this.time.delayedCall(100, () => {
+          this.scene.restart();
+        });
       }
-    });
-
-    // Listen for resize events to handle orientation changes properly
-    this.scale.on('resize', (gameSize) => {
-      this.handleResize(gameSize);
     });
 
     // Check initial orientation (in case user loads game in landscape)
     if (this.scale.isLandscape) {
       this.showLandscapeWarning();
-    }
-  }
-
-  handleResize() {
-    // Update warning overlay dimensions if it exists
-    if (this.orientationWarning) {
-      // Destroy and recreate warning overlay with new dimensions
-      this.orientationWarning.destroy();
-      this.orientationWarning = null;
-
-      // Only recreate if still in landscape
-      if (this.scale.isLandscape) {
-        this.showLandscapeWarning();
-      }
-    }
-
-    // Force status bar to reposition (it's fixed at top)
-    if (this.statusBar) {
-      this.statusBar.x = 0;
-      this.statusBar.y = 30;
     }
   }
 
