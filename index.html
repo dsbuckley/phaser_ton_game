@@ -65,8 +65,24 @@
       display: block;
       margin: 0;
       padding: 0;
+      width: 100% !important;
+      height: 100% !important;
       image-rendering: -webkit-optimize-contrast;
       image-rendering: crisp-edges;
+    }
+
+    /* Lock screen orientation visually */
+    @media screen and (orientation: landscape) {
+      html {
+        transform: rotate(-90deg);
+        transform-origin: left top;
+        width: 100vh;
+        height: 100vw;
+        overflow-x: hidden;
+        position: absolute;
+        top: 100%;
+        left: 0;
+      }
     }
   </style>
 </head>

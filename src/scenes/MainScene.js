@@ -113,8 +113,8 @@ export default class MainScene extends Phaser.Scene {
   }
 
   setupOrientationHandling() {
-    // Game canvas is locked to portrait dimensions - do nothing
-    // Phaser Scale.NONE with CENTER_BOTH handles everything
+    // CSS media query handles rotation - game stays in same physical position
+    // No JavaScript needed
   }
 
   showOfflineRegenNotification(energyGained) {
