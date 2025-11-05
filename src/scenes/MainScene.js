@@ -503,7 +503,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create treasure chest sprite (starts with first frame)
     if (this.textures.exists('chest_0001')) {
-      this.player = this.add.sprite(centerX + 10, centerY + 160, 'chest_0001');
+      this.player = this.add.sprite(centerX + 10, centerY + 140, 'chest_0001');
       this.player.setScale(0.85);
 
       // Make chest interactive
@@ -570,7 +570,7 @@ export default class MainScene extends Phaser.Scene {
       //   resolution: 2
       // }).setOrigin(0.5);
 
-      this.tapMeText = this.add.text(centerX, centerY + 180, 'Tap Me', {
+      this.tapMeText = this.add.text(centerX, centerY + 160, 'Tap Me', {
         fontFamily: 'Tilt Warp',
         fontSize: 30,
         color: '#FFFFFF',
@@ -611,7 +611,7 @@ export default class MainScene extends Phaser.Scene {
     // Create palm tree sprite (starts with first frame, positioned on right side)
     // Place AFTER sparkles so it renders on top
     if (this.textures.exists('palm_001')) {
-      this.palmTree = this.add.sprite(centerX + 125, centerY + 70, 'palm_001');
+      this.palmTree = this.add.sprite(centerX + 125, centerY + 50, 'palm_001');
       this.palmTree.setScale(1.3); // Scale up to take up most of the screen
       this.palmTree.setDepth(100); // Ensure palm tree is always in front of sparkles
 
