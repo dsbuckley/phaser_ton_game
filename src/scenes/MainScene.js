@@ -648,12 +648,10 @@ export default class MainScene extends Phaser.Scene {
       console.log('Telegram WebApp data:', window.Telegram?.WebApp?.initDataUnsafe);
     }
 
-    // Create status bar with initial values - positioned based on screen height
-    // Detect full-screen mode based on viewport height (mobile full-screen is typically tall)
-    // Desktop and compact mobile views have smaller heights
-    const viewportHeight = window.innerHeight;
-    const isFullscreenMobile = viewportHeight > 700; // Full-screen mobile is typically 800-900px+
-    const statusBarY = isFullscreenMobile ? 120 : 40;
+    // Create status bar with initial values - positioned based on aspect ratio
+    // Use the same aspect ratio detection as above (9:16 or taller = full-screen mobile)
+    // Default (compact/desktop): Y=30 (close to top), Full-screen mobile: Y=120 (lower)
+    const statusBarY = this.isFullscreenMobile ? 120 : 30;
 
     // Load persisted values from localStorage/Supabase
     this.statusBar = new StatusBar(this, 0, statusBarY, {
