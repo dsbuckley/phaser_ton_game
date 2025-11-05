@@ -120,11 +120,11 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const usernameY = avatarY + 30; // Below avatar
     this.usernameText = this.scene.add.text(usernameX, usernameY, `${this.config.username}`, {
       fontFamily: 'LINESeed',
-      fontSize: 14,
+      fontSize: 16,
       color: '#ffffff',
       fontStyle: 'bold',
       stroke: '#000000',
-      strokeThickness: 3,
+      strokeThickness: 2,
       resolution: window.devicePixelRatio
     }).setOrigin(0, 0.5); // Left-aligned
 
