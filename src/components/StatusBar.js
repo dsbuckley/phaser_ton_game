@@ -317,8 +317,8 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     // Position it over the Phaser canvas at the avatar location
     this.htmlAvatarContainer = document.createElement('div');
     this.htmlAvatarContainer.style.position = 'absolute';
-    this.htmlAvatarContainer.style.width = '42px';
-    this.htmlAvatarContainer.style.height = '42px';
+    this.htmlAvatarContainer.style.width = '45px';
+    this.htmlAvatarContainer.style.height = '45px';
     this.htmlAvatarContainer.style.borderRadius = '50%';
     this.htmlAvatarContainer.style.overflow = 'hidden';
     this.htmlAvatarContainer.style.pointerEvents = 'none'; // Don't block clicks
