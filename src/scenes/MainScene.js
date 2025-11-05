@@ -980,6 +980,11 @@ export default class MainScene extends Phaser.Scene {
       });
     }
 
+    // Trigger haptic feedback on chest click
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    }
+
     // Decrease battery by 1
     const newBattery = currentBattery - 1;
     this.batteryState.set(newBattery);
