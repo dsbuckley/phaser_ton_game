@@ -115,31 +115,40 @@ export default class MainScene extends Phaser.Scene {
   setupOrientationHandling() {
     // Store reference to orientation warning overlay
     this.orientationWarning = null;
-    // Store portrait dimensions to restore later
-    this.portraitWidth = null;
-    this.portraitHeight = null;
 
-    // Listen for orientation changes
-    this.scale.on('orientationchange', (orientation) => {
-      if (orientation === Phaser.Scale.Orientation.LANDSCAPE) {
-        // Save portrait dimensions before landscape switch
-        if (!this.portraitWidth) {
-          this.portraitWidth = this.scale.width;
-          this.portraitHeight = this.scale.height;
-        }
-        this.showLandscapeWarning();
-      } else if (orientation === Phaser.Scale.Orientation.PORTRAIT) {
-        this.hideLandscapeWarning();
-        // Force scene restart to restore proper layout
-        this.time.delayedCall(100, () => {
-          this.scene.restart();
-        });
-      }
+    // Store initial portrait dimensions and lock them
+    this.lockedWidth = window.innerWidth;
+    this.lockedHeight = window.innerHeight;
+
+    // If starting in landscape, swap dimensions to get portrait size
+    if (window.innerWidth > window.innerHeight) {
+      this.lockedWidth = window.innerHeight;
+      this.lockedHeight = window.innerWidth;
+    }
+
+    // Lock the game canvas to portrait dimensions
+    this.scale.resize(this.lockedWidth, this.lockedHeight);
+
+    // Listen for window resize (orientation change)
+    window.addEventListener('resize', () => {
+      this.handleOrientationChange();
     });
 
-    // Check initial orientation (in case user loads game in landscape)
-    if (this.scale.isLandscape) {
+    // Check initial orientation
+    this.handleOrientationChange();
+  }
+
+  handleOrientationChange() {
+    // Always keep game at portrait dimensions
+    this.scale.resize(this.lockedWidth, this.lockedHeight);
+
+    // Check if device is in landscape (width > height)
+    const isLandscape = window.innerWidth > window.innerHeight;
+
+    if (isLandscape) {
       this.showLandscapeWarning();
+    } else {
+      this.hideLandscapeWarning();
     }
   }
 

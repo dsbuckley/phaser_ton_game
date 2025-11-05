@@ -8,9 +8,8 @@ const config = {
   width: window.innerWidth,
   height: window.innerHeight,
   scale: {
-    mode: Phaser.Scale.FIT,  // Changed from RESIZE to FIT to maintain aspect
-    autoCenter: Phaser.Scale.CENTER_BOTH,  // Center the game
-    orientation: Phaser.Scale.Orientation.PORTRAIT  // Lock to portrait aspect
+    mode: Phaser.Scale.NONE,  // Manual control - don't auto-resize
+    autoCenter: Phaser.Scale.NO_CENTER
   },
   physics: {
     default: 'arcade',
