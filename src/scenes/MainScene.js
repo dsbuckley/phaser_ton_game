@@ -1053,7 +1053,10 @@ export default class MainScene extends Phaser.Scene {
       coin.setScale(scale);
 
       // Set random physics velocities for burst effect
-      const velocityX = Phaser.Math.Between(-200, 200); // Horizontal spread
+      // Big payouts spread wider to prevent bunching
+      const velocityX = isBigPayout
+        ? Phaser.Math.Between(-350, 350) // Big payout: wider spread (700px range)
+        : Phaser.Math.Between(-200, 200); // Normal: standard spread (400px range)
       // Big payouts fly much higher
       const velocityY = isBigPayout
         ? Phaser.Math.Between(-700, -900) // Big payout: launch higher
@@ -1088,8 +1091,9 @@ export default class MainScene extends Phaser.Scene {
         }
       });
 
-      // Fade out and destroy after 2 seconds
-      this.time.delayedCall(1500, () => {
+      // Fade out and destroy - big payouts stay longer
+      const fadeDelay = isBigPayout ? 2000 : 1500; // Big payout: 2.5s total, Normal: 2s total
+      this.time.delayedCall(fadeDelay, () => {
         this.tweens.add({
           targets: coin,
           alpha: 0,
