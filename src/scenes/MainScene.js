@@ -18,6 +18,12 @@ export default class MainScene extends Phaser.Scene {
   }
 
   async create() {
+    // Detect viewport mode for responsive positioning
+    // Full-screen mobile: > 700px height, Compact/Desktop: <= 700px height
+    const viewportHeight = window.innerHeight;
+    this.isFullscreenMobile = viewportHeight > 700;
+    this.yOffset = this.isFullscreenMobile ? 0 : -30; // Move up 30px in compact mode
+
     // Initialize persistent coin state using phaser-hooks
     // This will automatically save to localStorage and persist across sessions
     this.coinsState = withPersistentState(this, 'totalCoins', 0);
@@ -255,7 +261,7 @@ export default class MainScene extends Phaser.Scene {
   createSun() {
     // Position sun in upper left where the background sun is
     const sunX = 30;
-    const sunY = 230;
+    const sunY = 230 + this.yOffset; // Move up 30px in compact mode
 
     // Create sun sprite
     this.sun = this.add.image(sunX, sunY, 'sun');
@@ -288,27 +294,28 @@ export default class MainScene extends Phaser.Scene {
     this.activeClouds = [];
 
     // Define three depth layers for parallax effect
+    // Apply yOffset to move clouds up 30px in compact mode
     this.cloudLayers = [
       {
         depth: -50, // Behind everything (far)
         scale: { min: 0.15, max: 0.25 },
         alpha: 0.5, // More transparent (far away)
         speed: { min: 8, max: 12 }, // Very slow (far away)
-        yPosition: { min: 50, max: 180 } // Expanded range - higher and lower
+        yPosition: { min: 50 + this.yOffset, max: 180 + this.yOffset } // Expanded range - higher and lower
       },
       {
         depth: -40, // Middle distance
         scale: { min: 0.25, max: 0.35 },
         alpha: 0.65, // Medium transparency
         speed: { min: 12, max: 18 }, // Slow
-        yPosition: { min: 80, max: 220 } // Expanded range
+        yPosition: { min: 80 + this.yOffset, max: 220 + this.yOffset } // Expanded range
       },
       {
         depth: -30, // Closer
         scale: { min: 0.35, max: 0.5 },
         alpha: 0.8, // Less transparent
         speed: { min: 18, max: 25 }, // Moderate speed
-        yPosition: { min: 100, max: 280 } // Expanded range
+        yPosition: { min: 100 + this.yOffset, max: 280 + this.yOffset } // Expanded range
       }
     ];
 
@@ -397,7 +404,7 @@ export default class MainScene extends Phaser.Scene {
     // Sun is in the upper-left area of the background
     // Position sparkles below and to the right of the sun
     const sunX = 80; // Approximate sun position from the background
-    const sunY = 280; // Below the sun
+    const sunY = 280 + this.yOffset; // Below the sun, move up 30px in compact mode
 
     // Define the area where sparkles can appear
     const sparkleAreaX = sunX + 50; // To the right of sun
@@ -502,7 +509,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create treasure chest sprite (starts with first frame)
     if (this.textures.exists('chest_0001')) {
-      this.player = this.add.sprite(centerX + 10, centerY + 160, 'chest_0001');
+      this.player = this.add.sprite(centerX + 10, centerY + 160 + this.yOffset, 'chest_0001');
       this.player.setScale(0.85);
 
       // Make chest interactive
@@ -610,7 +617,7 @@ export default class MainScene extends Phaser.Scene {
     // Create palm tree sprite (starts with first frame, positioned on right side)
     // Place AFTER sparkles so it renders on top
     if (this.textures.exists('palm_001')) {
-      this.palmTree = this.add.sprite(centerX + 125, centerY + 70, 'palm_001');
+      this.palmTree = this.add.sprite(centerX + 125, centerY + 70 + this.yOffset, 'palm_001');
       this.palmTree.setScale(1.3); // Scale up to take up most of the screen
       this.palmTree.setDepth(100); // Ensure palm tree is always in front of sparkles
 
