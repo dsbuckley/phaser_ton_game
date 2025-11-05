@@ -267,7 +267,7 @@ export default class MainScene extends Phaser.Scene {
       targets: this.sun,
       scaleX: 0.45,
       scaleY: 0.45,
-      duration: 3000, // Slower: 3 seconds per pulse (was 2 seconds)
+      duration: 2000, // Slower: 3 seconds per pulse (was 2 seconds)
       ease: 'Sine.easeInOut',
       yoyo: true,
       repeat: -1 // Loop forever
@@ -277,7 +277,7 @@ export default class MainScene extends Phaser.Scene {
     this.tweens.add({
       targets: this.sun,
       angle: 360,
-      duration: 120000, // Slower: 120 seconds (2 minutes) for full rotation (was 60 seconds)
+      duration: 60000, // Slower: 120 seconds (2 minutes) for full rotation (was 60 seconds)
       ease: 'Linear',
       repeat: -1 // Loop forever
     });
