@@ -18,6 +18,12 @@ export default class MainScene extends Phaser.Scene {
   }
 
   async create() {
+    // Lock orientation to portrait mode
+    this.scale.lockOrientation('portrait');
+
+    // Setup orientation change handling
+    this.setupOrientationHandling();
+
     // Initialize persistent coin state using phaser-hooks
     // This will automatically save to localStorage and persist across sessions
     this.coinsState = withPersistentState(this, 'totalCoins', 0);
@@ -104,6 +110,97 @@ export default class MainScene extends Phaser.Scene {
     }
 
     return 0;
+  }
+
+  setupOrientationHandling() {
+    // Store reference to orientation warning overlay
+    this.orientationWarning = null;
+
+    // Listen for orientation changes
+    this.scale.on('orientationchange', (orientation) => {
+      if (orientation === Phaser.Scale.Orientation.LANDSCAPE) {
+        this.showLandscapeWarning();
+      } else if (orientation === Phaser.Scale.Orientation.PORTRAIT) {
+        this.hideLandscapeWarning();
+      }
+    });
+
+    // Check initial orientation (in case user loads game in landscape)
+    if (this.scale.isLandscape) {
+      this.showLandscapeWarning();
+    }
+  }
+
+  showLandscapeWarning() {
+    // Don't create duplicate warnings
+    if (this.orientationWarning) return;
+
+    console.log('Landscape orientation detected, showing warning');
+
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+
+    // Create container for warning overlay
+    this.orientationWarning = this.add.container(0, 0);
+    this.orientationWarning.setDepth(10000); // Above everything
+    this.orientationWarning.setScrollFactor(0); // Fixed position
+
+    // Semi-transparent black background
+    const overlay = this.add.rectangle(
+      centerX,
+      centerY,
+      this.scale.width,
+      this.scale.height,
+      0x000000,
+      0.9
+    );
+
+    // Rotation icon (using a simple text emoji for now)
+    const rotateIcon = this.add.text(centerX, centerY - 80, '📱', {
+      fontSize: '80px',
+      resolution: 2
+    }).setOrigin(0.5);
+
+    // Rotate animation for icon
+    this.tweens.add({
+      targets: rotateIcon,
+      angle: 90,
+      duration: 800,
+      ease: 'Back.inOut',
+      yoyo: true,
+      repeat: -1
+    });
+
+    // Warning text
+    const warningText = this.add.text(centerX, centerY + 40, 'Please rotate your device\nto portrait mode', {
+      fontFamily: 'Tilt Warp',
+      fontSize: '28px',
+      fill: '#FFFFFF',
+      align: 'center',
+      stroke: '#000000',
+      strokeThickness: 6,
+      padding: { x: 20, y: 20 },
+      resolution: 2
+    }).setOrigin(0.5);
+
+    // Add elements to container
+    this.orientationWarning.add([overlay, rotateIcon, warningText]);
+
+    // Pause game scene (optional - uncomment if you want to pause gameplay)
+    // this.scene.pause();
+  }
+
+  hideLandscapeWarning() {
+    if (!this.orientationWarning) return;
+
+    console.log('Portrait orientation restored, hiding warning');
+
+    // Destroy warning overlay
+    this.orientationWarning.destroy();
+    this.orientationWarning = null;
+
+    // Resume game scene if it was paused
+    // this.scene.resume();
   }
 
   showOfflineRegenNotification(energyGained) {
