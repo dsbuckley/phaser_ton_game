@@ -33,9 +33,9 @@ if (window.Telegram?.WebApp) {
   window.Telegram.WebApp.expand();
 
   // Request fullscreen mode for all launch contexts (Telegram WebApp v8.0+)
-  if (window.Telegram.WebApp.requestFullscreen) {
-    window.Telegram.WebApp.requestFullscreen();
-  }
+  // if (window.Telegram.WebApp.requestFullscreen) {
+  //   window.Telegram.WebApp.requestFullscreen();
+  // }
 }
 
 // Wait for fonts to load before starting the game
