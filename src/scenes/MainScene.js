@@ -125,8 +125,8 @@ export default class MainScene extends Phaser.Scene {
     );
     bg.setOrigin(0.5);
 
-    // Create battery icon
-    const icon = this.add.image(-100, -5, 'battery_icon');
+    // Create energy icon (matching StatusBar energy icon)
+    const icon = this.add.image(-100, -5, 'statusbar_energy');
     icon.setScale(0.25); // Much smaller icon
 
     // Create main text
