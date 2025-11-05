@@ -260,7 +260,7 @@ export default class MainScene extends Phaser.Scene {
     // Create sun sprite
     this.sun = this.add.image(sunX, sunY, 'sun');
     this.sun.setScale(0.4); // Scale to appropriate size
-    this.sun.setDepth(-20); // In front of clouds (-50 to -30), behind sparkles (0)
+    this.sun.setDepth(10); // In front of clouds (-50 to -30) and sparkles (0)
 
     // Pulsating animation (scale up and down)
     this.tweens.add({
@@ -517,7 +517,7 @@ export default class MainScene extends Phaser.Scene {
         this.player.clearTint();
       });
 
-      // Press down effect
+      // Press up effect (scale up instead of down)
       this.player.on('pointerdown', () => {
         // Kill any existing tweens to prevent stacking
         this.tweens.killTweensOf(this.player);
@@ -527,8 +527,8 @@ export default class MainScene extends Phaser.Scene {
 
         this.tweens.add({
           targets: this.player,
-          scaleX: 0.80,
-          scaleY: 0.80,
+          scaleX: 0.90,
+          scaleY: 0.90,
           duration: 100,
           ease: 'Power2'
         });
