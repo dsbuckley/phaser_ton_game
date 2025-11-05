@@ -997,7 +997,7 @@ export default class MainScene extends Phaser.Scene {
     // Determine payout size (10% chance for big payout)
     const isBigPayout = Math.random() < 0.20;
     const coinReward = isBigPayout
-      ? Phaser.Math.Between(25, 50)  // Big payout
+      ? Phaser.Utils.Array.GetRandom([50, 100, 150, 200, 250])  // Big payout: 50-250 in 50 increments
       : Phaser.Math.Between(1, 9);   // Normal payout
 
     // Play treasure chest sound (different sound for big payouts)
