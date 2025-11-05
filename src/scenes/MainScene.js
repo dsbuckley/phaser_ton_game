@@ -646,7 +646,7 @@ export default class MainScene extends Phaser.Scene {
     // Desktop and compact mobile views have smaller heights
     const viewportHeight = window.innerHeight;
     const isFullscreenMobile = viewportHeight > 700; // Full-screen mobile is typically 800-900px+
-    const statusBarY = isFullscreenMobile ? 120 : 60;
+    const statusBarY = isFullscreenMobile ? 120 : 40;
 
     // Load persisted values from localStorage/Supabase
     this.statusBar = new StatusBar(this, 0, statusBarY, {
