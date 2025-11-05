@@ -365,7 +365,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     // StatusBar is positioned at (0, 140) in MainScene
     // Avatar is at (35, 0) relative to StatusBar
-    const statusBarY = 140;
+    const statusBarY = 120;
     const avatarX = 35;
     const avatarY = 0;
 
