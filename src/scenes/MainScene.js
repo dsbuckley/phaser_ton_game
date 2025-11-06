@@ -1379,9 +1379,8 @@ export default class MainScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(1150); // Behind text (1200) but in front of coins (1100)
 
-    // Scale to appropriate size for text area
-    const textLightScale = 0.8;
-    textLightBg.setScale(textLightScale);
+    // Scale to match chest light (same size)
+    textLightBg.setScale(scale);
 
     // Rotating animation for text light
     this.tweens.add({
