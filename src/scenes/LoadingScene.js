@@ -94,6 +94,13 @@ export default class LoadingScene extends Phaser.Scene {
     // Battery bar icon
     loader.image('battery_icon', '/assets/Components/Icon_ItemIcons/512/ItemIcon_Battery.png');
 
+    // Bottom tab menu icons
+    loader.image('icon_heart', '/assets/Components/IconMisc/Icon_Heart01.png');
+    loader.image('icon_picture', '/assets/Components/IconMisc/Icon_Picture.png');
+    loader.image('icon_setting', '/assets/Components/IconMisc/Icon_Setting01.Png');
+    loader.image('icon_gold', '/assets/Components/IconMisc/Icon_Gold.png');
+    loader.image('icon_trophy', '/assets/Components/IconMisc/Icon_Trophy_s.png');
+
     // Mega jackpot light background
     loader.image('jackpot_light', '/assets/Components/Demo_Image/Image_Light.png');
 

@@ -3,6 +3,7 @@ import { TonConnectUI } from '@tonconnect/ui';
 import { createClient } from '@supabase/supabase-js';
 import { withPersistentState } from '../utils/persistentState.js';
 import StatusBar from '../components/StatusBar.js';
+import BottomTabMenu from '../components/BottomTabMenu.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -496,6 +497,9 @@ export default class MainScene extends Phaser.Scene {
     // Create status bar at top of screen
     this.createStatusBar();
 
+    // Create bottom tab menu at bottom of screen
+    this.createBottomTabMenu();
+
     // Add background image
     if (this.textures.exists('background')) {
       const bg = this.add.image(centerX, centerY, 'background');
@@ -691,6 +695,79 @@ export default class MainScene extends Phaser.Scene {
     this.batteryBar = {
       setBattery: () => {} // No-op function
     };
+  }
+
+  createBottomTabMenu() {
+    const centerX = this.cameras.main.width / 2;
+    const screenHeight = this.cameras.main.height;
+    const barHeight = 70; // Height of the tab menu bar
+    const menuY = screenHeight - (barHeight / 2); // Position so bottom edge is at screen bottom
+
+    // Create bottom tab menu with 5 tabs
+    this.bottomTabMenu = new BottomTabMenu(this, centerX, menuY, {
+      tabs: [
+        {
+          key: 'main',
+          icon: 'icon_heart',
+          label: 'MAIN',
+          showNotification: false,
+          onTap: (key) => {
+            console.log(`${key} tab tapped`);
+            // Already in MainScene, so just log for now
+          }
+        },
+        {
+          key: 'stickers',
+          icon: 'icon_picture',
+          label: 'STICKERS',
+          showNotification: true,
+          onTap: (key) => {
+            console.log(`${key} tab tapped`);
+            // TODO: Navigate to StickersScene when created
+            // this.scene.start('StickersScene');
+          }
+        },
+        {
+          key: 'wheel',
+          icon: 'icon_setting',
+          label: 'WHEEL',
+          showNotification: false,
+          onTap: (key) => {
+            console.log(`${key} tab tapped`);
+            // TODO: Navigate to WheelScene when created
+            // this.scene.start('WheelScene');
+          }
+        },
+        {
+          key: 'earn',
+          icon: 'icon_gold',
+          label: 'EARN',
+          showNotification: true,
+          onTap: (key) => {
+            console.log(`${key} tab tapped`);
+            // TODO: Navigate to EarnScene when created
+            // this.scene.start('EarnScene');
+          }
+        },
+        {
+          key: 'shop',
+          icon: 'icon_trophy',
+          label: 'SHOP',
+          showNotification: false,
+          onTap: (key) => {
+            console.log(`${key} tab tapped`);
+            // TODO: Navigate to ShopScene when created
+            // this.scene.start('ShopScene');
+          }
+        }
+      ]
+    });
+
+    this.add.existing(this.bottomTabMenu);
+
+    // Set to stay fixed at bottom
+    this.bottomTabMenu.setScrollFactor(0);
+    this.bottomTabMenu.setDepth(1000); // Same as StatusBar
   }
 
   getTelegramUserData() {
@@ -1023,7 +1100,7 @@ export default class MainScene extends Phaser.Scene {
     if (rand < 0.05) {
       // 5% mega jackpot
       isMegaJackpot = true;
-      coinReward = Phaser.Utils.Array.GetRandom([500, 1000, 1500, 2000, 2500]);
+      coinReward = Phaser.Utils.Array.GetRandom([1000, 1500, 2000, 2500, 3000]);
     } else if (rand < 0.20) {
       // 15% big payout
       isBigPayout = true;
