@@ -1185,8 +1185,32 @@ export default class MainScene extends Phaser.Scene {
     // Set jackpot playing flag
     this.isJackpotPlaying = true;
 
-    // Play mega jackpot sound once at the start
+    // Play mega jackpot sounds at the start
     this.sound.play('mega_jackpot_sound');
+    this.sound.play('yeah_sound');
+
+    // Create spinning light background that covers the entire screen
+    const screenCenterX = this.cameras.main.width / 2;
+    const screenCenterY = this.cameras.main.height / 2;
+
+    const lightBg = this.add.image(screenCenterX, screenCenterY, 'jackpot_light')
+      .setOrigin(0.5)
+      .setDepth(300); // In front of everything
+
+    // Scale to cover entire screen
+    const scaleX = this.cameras.main.width / lightBg.width;
+    const scaleY = this.cameras.main.height / lightBg.height;
+    const scale = Math.max(scaleX, scaleY) * 1.2; // 1.2x for extra coverage
+    lightBg.setScale(scale);
+
+    // Rotating animation
+    this.tweens.add({
+      targets: lightBg,
+      angle: 360,
+      duration: 3000,
+      ease: 'Linear',
+      repeat: -1
+    });
 
     // Animate chest between frames 19 and 27 for bouncing effect
     const frames = ['chest_0019', 'chest_0021', 'chest_0023', 'chest_0025', 'chest_0027'];
@@ -1280,12 +1304,15 @@ export default class MainScene extends Phaser.Scene {
             // Play close animation
             this.player.play('chest_close', true);
 
-            // Remove mega text
+            // Remove mega text and light background
             this.tweens.add({
-              targets: megaText,
+              targets: [megaText, lightBg],
               alpha: 0,
               duration: 500,
-              onComplete: () => megaText.destroy()
+              onComplete: () => {
+                megaText.destroy();
+                lightBg.destroy();
+              }
             });
 
             // Re-enable chest clicking and interactivity

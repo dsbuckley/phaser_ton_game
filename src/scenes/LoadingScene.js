@@ -94,10 +94,14 @@ export default class LoadingScene extends Phaser.Scene {
     // Battery bar icon
     loader.image('battery_icon', '/assets/Components/Icon_ItemIcons/512/ItemIcon_Battery.png');
 
+    // Mega jackpot light background
+    loader.image('jackpot_light', '/assets/Components/Demo_Image/Image_Light.png');
+
     // Sounds
     loader.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
     loader.audio('chest_sound_big', '/assets/sounds/treasure_chest_4.mp3');
     loader.audio('mega_jackpot_sound', '/assets/sounds/mega_jackpot.mp3');
+    loader.audio('yeah_sound', '/assets/sounds/yeah.mp3');
 
     // Sparkle effect
     loader.image('sparkle', '/assets/sparkle.webp');
