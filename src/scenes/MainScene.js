@@ -1309,9 +1309,11 @@ export default class MainScene extends Phaser.Scene {
     // Set jackpot playing flag
     this.isJackpotPlaying = true;
 
-    // Play mega jackpot sounds at the start
+    // Play mega jackpot sounds at the start (yeah_sound delayed by 400ms)
     this.sound.play('mega_jackpot_sound');
-    this.sound.play('yeah_sound');
+    this.time.delayedCall(400, () => {
+      this.sound.play('yeah_sound');
+    });
 
     // Create spinning light background centered on the chest
     const lightBg = this.add.image(this.player.x, this.player.y, 'jackpot_light')
@@ -1389,8 +1391,8 @@ export default class MainScene extends Phaser.Scene {
     const totalBursts = totalAmount / coinsPerBurst;
     let burstsCompleted = 0;
 
-    // Start streaming timer after 100ms delay
-    this.time.delayedCall(100, () => {
+    // Start streaming timer after 700ms delay
+    this.time.delayedCall(700, () => {
       const burstTimer = this.time.addEvent({
         delay: burstInterval,
         callback: () => {
