@@ -1374,6 +1374,24 @@ export default class MainScene extends Phaser.Scene {
       resolution: 2
     }).setOrigin(0.5).setDepth(1200); // In front of coins (1100) but behind status bar (2000)
 
+    // Create second spinning light background behind the text
+    const textLightBg = this.add.image(centerX, 140, 'jackpot_light')
+      .setOrigin(0.5)
+      .setDepth(1150); // Behind text (1200) but in front of coins (1100)
+
+    // Scale to appropriate size for text area
+    const textLightScale = 0.8;
+    textLightBg.setScale(textLightScale);
+
+    // Rotating animation for text light
+    this.tweens.add({
+      targets: textLightBg,
+      angle: 360,
+      duration: 3000,
+      ease: 'Linear',
+      repeat: -1
+    });
+
     // Pulsing text animation
     this.tweens.add({
       targets: megaText,
@@ -1432,14 +1450,15 @@ export default class MainScene extends Phaser.Scene {
             // Play close animation
             this.player.play('chest_close', true);
 
-            // Remove mega text and light background
+            // Remove mega text and light backgrounds
             this.tweens.add({
-              targets: [megaText, lightBg],
+              targets: [megaText, lightBg, textLightBg],
               alpha: 0,
               duration: 500,
               onComplete: () => {
                 megaText.destroy();
                 lightBg.destroy();
+                textLightBg.destroy();
               }
             });
 
