@@ -59,7 +59,7 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
   calculateLayout() {
     const screenWidth = this.scene.cameras.main.width;
     const tabCount = this.config.tabs.length;
-    const barHeight = 70;
+    const barHeight = 100; // Increased to 100px for better spacing
 
     return {
       totalWidth: screenWidth,

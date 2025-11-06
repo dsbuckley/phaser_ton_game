@@ -700,7 +700,7 @@ export default class MainScene extends Phaser.Scene {
   createBottomTabMenu() {
     const centerX = this.cameras.main.width / 2;
     const screenHeight = this.cameras.main.height;
-    const barHeight = 70; // Height of the tab menu bar
+    const barHeight = 100; // Increased height for better spacing
     const menuY = screenHeight - (barHeight / 2); // Position so bottom edge is at screen bottom
 
     // Create bottom tab menu with 5 tabs
