@@ -1104,7 +1104,7 @@ export default class MainScene extends Phaser.Scene {
     } else if (rand < 0.20) {
       // 15% big payout
       isBigPayout = true;
-      coinReward = Phaser.Utils.Array.GetRandom([50, 100, 150, 200, 250]);
+      coinReward = Phaser.Utils.Array.GetRandom([50, 75, 100, 125, 150]);
     } else {
       // 80% normal payout
       coinReward = Phaser.Math.Between(1, 9);
