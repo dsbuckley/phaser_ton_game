@@ -1267,11 +1267,8 @@ export default class MainScene extends Phaser.Scene {
     this.sound.play('mega_jackpot_sound');
     this.sound.play('yeah_sound');
 
-    // Create spinning light background that covers the entire screen
-    const screenCenterX = this.cameras.main.width / 2;
-    const screenCenterY = this.cameras.main.height / 2;
-
-    const lightBg = this.add.image(screenCenterX, screenCenterY, 'jackpot_light')
+    // Create spinning light background centered on the chest
+    const lightBg = this.add.image(this.player.x, this.player.y, 'jackpot_light')
       .setOrigin(0.5)
       .setDepth(1300); // In front of coins (1100) but behind status bar (2000)
 
