@@ -15,6 +15,7 @@ export default class MainScene extends Phaser.Scene {
     this.firstClick = false;
     this.lastClickTime = 0;
     this.batteryRegenTimer = null;
+    this.isJackpotPlaying = false;
   }
 
   async create() {
@@ -956,6 +957,11 @@ export default class MainScene extends Phaser.Scene {
   }
 
   openChest() {
+    // Prevent opening chest during mega jackpot
+    if (this.isJackpotPlaying) {
+      return;
+    }
+
     // Record the time of this click for battery regeneration logic
     this.lastClickTime = this.time.now;
 
@@ -1010,41 +1016,61 @@ export default class MainScene extends Phaser.Scene {
     const chestsOpened = this.totalChestsOpenedState.get();
     this.totalChestsOpenedState.set(chestsOpened + 1);
 
-    // Determine payout size (10% chance for big payout)
-    const isBigPayout = Math.random() < 0.20;
-    const coinReward = isBigPayout
-      ? Phaser.Utils.Array.GetRandom([50, 100, 150, 200, 250])  // Big payout: 50-250 in 50 increments
-      : Phaser.Math.Between(1, 9);   // Normal payout
+    // Determine payout size with new probability distribution
+    const rand = Math.random();
+    let coinReward, isMegaJackpot = false, isBigPayout = false;
 
-    // Play treasure chest sound (different sound for big payouts)
-    this.sound.play(isBigPayout ? 'chest_sound' : 'chest_sound_big');
+    if (rand < 0.05) {
+      // 5% mega jackpot
+      isMegaJackpot = true;
+      coinReward = Phaser.Utils.Array.GetRandom([500, 1000, 1500, 2000, 2500]);
+    } else if (rand < 0.20) {
+      // 15% big payout
+      isBigPayout = true;
+      coinReward = Phaser.Utils.Array.GetRandom([50, 100, 150, 200, 250]);
+    } else {
+      // 80% normal payout
+      coinReward = Phaser.Math.Between(1, 9);
+    }
 
-    // Visual feedback
-    //this.connectButtonText.setText('Opening...');
+    // Handle mega jackpot differently
+    if (isMegaJackpot) {
+      // Stop any existing animations
+      if (this.player.anims) {
+        this.player.anims.stop();
+      }
 
-    // Restart chest opening animation (restarts if already playing)
-    this.player.play('chest_open', true);
+      // Directly set chest to more open frame
+      // Loaded frames are: 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37
+      // Using frame 27 for a more open chest
+      this.player.setTexture('chest_0027');
 
-    // Trigger coin confetti after 300ms delay with the coin reward amount
-    this.time.delayedCall(300, () => {
-      this.createCoinConfetti(coinReward, isBigPayout);
-    });
+      // Start streaming mega jackpot immediately
+      this.streamMegaJackpotCoins(coinReward);
+    } else {
+      // Normal/big payout flow
+      // Play treasure chest sound (different sound for big payouts)
+      this.sound.play(isBigPayout ? 'chest_sound' : 'chest_sound_big');
 
-    // Play closing animation after opening completes
-    this.time.delayedCall(500, () => {
-      this.player.play('chest_close', true);
-    });
+      // Restart chest opening animation (restarts if already playing)
+      this.player.play('chest_open', true);
+
+      // Trigger coin confetti after 300ms delay with the coin reward amount
+      this.time.delayedCall(300, () => {
+        this.createCoinConfetti(coinReward, isBigPayout);
+      });
+
+      // Play closing animation after opening completes
+      this.time.delayedCall(500, () => {
+        this.player.play('chest_close', true);
+      });
+    }
 
     // Immediately save stats to Supabase after chest open (don't wait for auto-save)
     this.saveStatsToSupabase();
-
-    // Reset button text after animation completes
-    // this.time.delayedCall(300, () => {
-    //   this.connectButtonText.setText('Tap to Open');
-    // });
   }
 
-  createCoinConfetti(coinAmount, isBigPayout = false) {
+  createCoinConfetti(coinAmount, isBigPayout = false, skipTotalUpdate = false) {
     // Get chest position
     const chestX = this.player.x;
     const chestY = this.player.y;
@@ -1117,37 +1143,156 @@ export default class MainScene extends Phaser.Scene {
       });
     }
 
-    // Create floating "+X" text that rises and fades
-    // Big payouts get larger, golden text
-    const floatingText = this.add.text(chestX, chestY, `+${coinAmount}`, {
-      fontFamily: 'Tilt Warp',
-      fontSize: isBigPayout ? '72px' : '48px', // Larger for big payouts
-      fill: isBigPayout ? '#FFD700' : '#FFFFFF', // Golden for big payouts, white for normal
-      stroke: '#000000',
-      strokeThickness: isBigPayout ? 8 : 6, // Thicker stroke for big payouts
-      padding: { x: 20, y: 20 },
-      resolution: 2
-    }).setOrigin(0.5).setDepth(150); // Render in front of palm tree
+    // Create floating "+X" text that rises and fades (skip for streaming mode)
+    if (!skipTotalUpdate) {
+      const floatingText = this.add.text(chestX, chestY, `+${coinAmount}`, {
+        fontFamily: 'Tilt Warp',
+        fontSize: isBigPayout ? '72px' : '48px', // Larger for big payouts
+        fill: isBigPayout ? '#FFD700' : '#FFFFFF', // Golden for big payouts, white for normal
+        stroke: '#000000',
+        strokeThickness: isBigPayout ? 8 : 6, // Thicker stroke for big payouts
+        padding: { x: 20, y: 20 },
+        resolution: 2
+      }).setOrigin(0.5).setDepth(150); // Render in front of palm tree
 
-    // Animate text floating upward and fading out
-    // Big payouts go higher and stay longer
-    this.tweens.add({
-      targets: floatingText,
-      y: isBigPayout ? chestY - 450 : chestY - 250, // Big payouts float much higher
-      alpha: 0, // Fade to transparent
-      duration: isBigPayout ? 2000 : 1000, // Big payouts stay 2 seconds, normal 1 second
-      ease: 'Sine.easeOut', // Smooth deceleration
-      onComplete: () => floatingText.destroy()
+      // Animate text floating upward and fading out
+      // Big payouts go higher and stay longer
+      this.tweens.add({
+        targets: floatingText,
+        y: isBigPayout ? chestY - 450 : chestY - 250, // Big payouts float much higher
+        alpha: 0, // Fade to transparent
+        duration: isBigPayout ? 2000 : 1000, // Big payouts stay 2 seconds, normal 1 second
+        ease: 'Sine.easeOut', // Smooth deceleration
+        onComplete: () => floatingText.destroy()
+      });
+    }
+
+    // Update total coins (skip for streaming mode - updated manually)
+    if (!skipTotalUpdate) {
+      const currentCoins = this.coinsState.get();
+      const newTotal = currentCoins + coinAmount;
+      this.coinsState.set(newTotal);
+
+      // Update StatusBar with animation
+      this.statusBar.setResource('coins', newTotal, true);
+    }
+  }
+
+  streamMegaJackpotCoins(totalAmount) {
+    // Set jackpot playing flag
+    this.isJackpotPlaying = true;
+
+    // Play mega jackpot sound once at the start
+    this.sound.play('mega_jackpot_sound');
+
+    // Animate chest between frames 19 and 27 for bouncing effect
+    const frames = ['chest_0019', 'chest_0021', 'chest_0023', 'chest_0025', 'chest_0027'];
+    let currentFrameIndex = 0;
+    let direction = 1; // 1 = forward, -1 = backward
+
+    const textureKeeper = this.time.addEvent({
+      delay: 150, // Change frame every 150ms
+      callback: () => {
+        if (this.isJackpotPlaying) {
+          this.player.setTexture(frames[currentFrameIndex]);
+
+          // Move to next frame
+          currentFrameIndex += direction;
+
+          // Reverse direction at ends (yoyo effect)
+          if (currentFrameIndex >= frames.length - 1) {
+            direction = -1;
+          } else if (currentFrameIndex <= 0) {
+            direction = 1;
+          }
+        }
+      },
+      loop: true
     });
 
-    // Update total coins using phaser-hooks persistent state
-    // This automatically saves to localStorage
-    const currentCoins = this.coinsState.get();
-    const newTotal = currentCoins + coinAmount;
-    this.coinsState.set(newTotal);
+    // Create "MEGA JACKPOT!" text announcement
+    const centerX = this.cameras.main.width / 2;
 
-    // Update StatusBar with animation
-    this.statusBar.setResource('coins', newTotal, true);
+    const megaText = this.add.text(centerX, 140, `MEGA JACKPOT!\n+${totalAmount}`, {
+      fontFamily: 'Tilt Warp',
+      fontSize: '38px',
+      fill: '#FFD700', // Gold
+      stroke: '#FF4500', // Orange-red outline
+      strokeThickness: 5,
+      align: 'center',
+      padding: { x: 15, y: 15 },
+      resolution: 2
+    }).setOrigin(0.5).setDepth(200);
+
+    // Pulsing text animation
+    this.tweens.add({
+      targets: megaText,
+      scaleX: 1.1,
+      scaleY: 1.1,
+      duration: 500,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1
+    });
+
+    // Streaming configuration
+    const coinsPerBurst = 50; // Spawn 50 coins per burst
+    const burstInterval = 300; // Every 300ms
+    const totalBursts = totalAmount / coinsPerBurst;
+    let burstsCompleted = 0;
+
+    // Start streaming timer after 500ms delay
+    this.time.delayedCall(500, () => {
+      const burstTimer = this.time.addEvent({
+        delay: burstInterval,
+        callback: () => {
+        // Play sound (overlapping allowed)
+        this.sound.play('chest_sound_big');
+
+        // Spawn coin burst (skip total update - we'll update incrementally)
+        this.createCoinConfetti(coinsPerBurst, true, true);
+
+        // Update coins incrementally with each burst
+        const currentCoins = this.coinsState.get();
+        const newTotal = currentCoins + coinsPerBurst;
+        this.coinsState.set(newTotal);
+
+        // Update StatusBar with animation
+        this.statusBar.setResource('coins', newTotal, true);
+
+        burstsCompleted++;
+
+        // Check if done
+        if (burstsCompleted >= totalBursts) {
+          burstTimer.remove();
+
+          // Wait 1 second after final burst
+          this.time.delayedCall(1000, () => {
+            // Stop texture keeper
+            textureKeeper.remove();
+
+            // Re-enable animations
+            this.player.anims.resume();
+
+            // Play close animation
+            this.player.play('chest_close', true);
+
+            // Remove mega text
+            this.tweens.add({
+              targets: megaText,
+              alpha: 0,
+              duration: 500,
+              onComplete: () => megaText.destroy()
+            });
+
+            // Re-enable chest clicking
+            this.isJackpotPlaying = false;
+          });
+        }
+      },
+      loop: true
+    });
+    }); // Close delayedCall callback
   }
 
   async onWalletConnected(wallet) {
