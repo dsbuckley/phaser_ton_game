@@ -519,7 +519,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create treasure chest sprite (starts with first frame)
     if (this.textures.exists('chest_0001')) {
-      this.player = this.add.sprite(centerX + 10, centerY + 140, 'chest_0001');
+      this.player = this.add.sprite(centerX + 10, centerY + 120, 'chest_0001');
       this.player.setScale(0.85);
 
       // Make chest interactive
@@ -586,7 +586,7 @@ export default class MainScene extends Phaser.Scene {
       //   resolution: 2
       // }).setOrigin(0.5);
 
-      this.tapMeText = this.add.text(centerX, centerY + 160, 'Tap Me', {
+      this.tapMeText = this.add.text(centerX, centerY + 140, 'Tap Me', {
         fontFamily: 'Tilt Warp',
         fontSize: 30,
         color: '#FFFFFF',
@@ -627,7 +627,7 @@ export default class MainScene extends Phaser.Scene {
     // Create palm tree sprite (starts with first frame, positioned on right side)
     // Place AFTER sparkles so it renders on top
     if (this.textures.exists('palm_001')) {
-      this.palmTree = this.add.sprite(centerX + 125, centerY + 50, 'palm_001');
+      this.palmTree = this.add.sprite(centerX + 125, centerY + 30, 'palm_001');
       this.palmTree.setScale(1.3); // Scale up to take up most of the screen
       this.palmTree.setDepth(100); // Ensure palm tree is always in front of sparkles
 
@@ -751,7 +751,8 @@ export default class MainScene extends Phaser.Scene {
         },
         {
           key: 'shop',
-          icon: 'icon_trophy',
+          icon: 'icon_shop',
+          iconSize: 38, // Make shop icon larger (256px asset needs more size)
           label: 'SHOP',
           showNotification: false,
           onTap: (key) => {
@@ -1352,6 +1353,11 @@ export default class MainScene extends Phaser.Scene {
         callback: () => {
         // Play sound (overlapping allowed)
         this.sound.play('chest_sound_big');
+
+        // Trigger haptic feedback synchronized with sound
+        if (window.Telegram?.WebApp?.HapticFeedback) {
+          window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        }
 
         // Spawn coin burst (skip total update - we'll update incrementally)
         this.createCoinConfetti(coinsPerBurst, true, true);

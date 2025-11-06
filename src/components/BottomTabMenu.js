@@ -122,7 +122,7 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
    * @returns {Object} Tab element object
    */
   createTab(x, y, tab, width, height) {
-    const iconSize = 32;
+    const iconSize = tab.iconSize || 32; // Allow custom icon size per tab
     const iconY = y - 10; // Position icon slightly above center
     const labelY = y + 18; // Position label below icon
 
