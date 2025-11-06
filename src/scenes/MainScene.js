@@ -1147,7 +1147,7 @@ export default class MainScene extends Phaser.Scene {
     if (rand < 0.05) {
       // 5% mega jackpot
       isMegaJackpot = true;
-      coinReward = Phaser.Utils.Array.GetRandom([1000, 1500, 2000, 2500, 3000]);
+      coinReward = Phaser.Utils.Array.GetRandom([1500, 2000, 2500, 3000, 5000]);
     } else if (rand < 0.20) {
       // 15% big payout
       isBigPayout = true;
@@ -1363,7 +1363,7 @@ export default class MainScene extends Phaser.Scene {
 
     const megaText = this.add.text(centerX, 140, `MEGA JACKPOT!\n+${totalAmount}`, {
       fontFamily: 'Tilt Warp',
-      fontSize: '38px',
+      fontSize: '42px',
       fill: '#FFD700', // Gold
       stroke: '#FF4500', // Orange-red outline
       strokeThickness: 5,
@@ -1385,12 +1385,12 @@ export default class MainScene extends Phaser.Scene {
 
     // Streaming configuration
     const coinsPerBurst = 50; // Spawn 50 coins per burst
-    const burstInterval = 300; // Every 300ms
+    const burstInterval = 200; // Every 300ms
     const totalBursts = totalAmount / coinsPerBurst;
     let burstsCompleted = 0;
 
-    // Start streaming timer after 500ms delay
-    this.time.delayedCall(500, () => {
+    // Start streaming timer after 100ms delay
+    this.time.delayedCall(100, () => {
       const burstTimer = this.time.addEvent({
         delay: burstInterval,
         callback: () => {
