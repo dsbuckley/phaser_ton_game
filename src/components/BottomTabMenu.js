@@ -78,10 +78,13 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
     // Add extra width to eliminate edge gaps (extend beyond screen edges)
     const bgWidth = totalWidth + 20; // 10px extra on each side
 
+    // Shift background down by 15px so top edge is lower
+    const bgYOffset = 15;
+
     // Create NineSlice background (same asset as StatusBar)
     if (this.scene.textures.exists(this.config.bgTexture)) {
       this.background = this.scene.add.nineslice(
-        0, 0,
+        0, bgYOffset,
         this.config.bgTexture,
         null,
         bgWidth, barHeight,
@@ -91,7 +94,7 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
       // Fallback: dark rounded rectangle
       const graphics = this.scene.add.graphics();
       graphics.fillStyle(0x000000, 0.9);
-      graphics.fillRoundedRect(-bgWidth / 2, -barHeight / 2, bgWidth, barHeight, 10);
+      graphics.fillRoundedRect(-bgWidth / 2, bgYOffset - barHeight / 2, bgWidth, barHeight, 10);
       this.background = graphics;
     }
 
@@ -157,15 +160,38 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
     }).setOrigin(0.5);
     this.add(label);
 
-    // Notification dot (optional)
+    // Notification badge (optional)
     let notificationDot = null;
+    let notificationText = null;
     if (tab.showNotification) {
+      const bgYOffset = 15; // Match background offset
       const dotX = x + width / 2 - 15; // Top-right corner of tab
-      const dotY = y - height / 2 + 10;
+      const dotY = y - height / 2 + 10 + bgYOffset; // Shift down with background
 
-      notificationDot = this.scene.add.circle(dotX, dotY, 6, 0xff0000);
-      notificationDot.setStrokeStyle(2, 0xffffff, 1);
-      this.add(notificationDot);
+      // Check if there's notification text (like "NEW")
+      const hasText = tab.notificationText && tab.notificationText.length > 0;
+
+      if (hasText) {
+        // Larger badge with text - more padding for readability
+        notificationDot = this.scene.add.circle(dotX, dotY, 13, 0xff0000); // Increased from 10 to 13
+        notificationDot.setStrokeStyle(2, 0xffffff, 1);
+        this.add(notificationDot);
+
+        // Add text inside the badge
+        notificationText = this.scene.add.text(dotX, dotY, tab.notificationText, {
+          fontFamily: 'LINESeed',
+          fontSize: '9px', // Slightly larger font
+          color: '#ffffff',
+          fontStyle: 'bold',
+          resolution: window.devicePixelRatio
+        }).setOrigin(0.5);
+        this.add(notificationText);
+      } else {
+        // Small dot without text
+        notificationDot = this.scene.add.circle(dotX, dotY, 6, 0xff0000);
+        notificationDot.setStrokeStyle(2, 0xffffff, 1);
+        this.add(notificationDot);
+      }
     }
 
     // Add interaction effects
@@ -177,6 +203,7 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
       icon: icon,
       label: label,
       notificationDot: notificationDot,
+      notificationText: notificationText,
       config: tab
     };
   }
@@ -261,25 +288,65 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
    * Show or hide notification dot on a specific tab
    * @param {string} tabKey - Tab key identifier
    * @param {boolean} visible - Show (true) or hide (false)
+   * @param {string|null} text - Optional text to display in badge (e.g., 'NEW')
    */
-  setNotification(tabKey, visible) {
+  setNotification(tabKey, visible, text = null) {
     const tabElement = this.tabElements.find(t => t.key === tabKey);
-    if (tabElement && tabElement.notificationDot) {
-      tabElement.notificationDot.setVisible(visible);
-    } else if (tabElement && visible && !tabElement.notificationDot) {
-      // Create notification dot if it doesn't exist
+
+    if (tabElement) {
+      // If hiding, just hide existing elements
+      if (!visible) {
+        if (tabElement.notificationDot) {
+          tabElement.notificationDot.setVisible(false);
+        }
+        if (tabElement.notificationText) {
+          tabElement.notificationText.setVisible(false);
+        }
+        return;
+      }
+
+      // If showing, determine if we need text badge or simple dot
+      const hasText = text && text.length > 0;
+
+      // Calculate position values
       const layout = this.calculateLayout();
       const tabWidth = layout.tabWidth;
       const barHeight = layout.barHeight;
-
+      const bgYOffset = 15;
       const dotX = tabElement.icon.x + tabWidth / 2 - 15;
-      const dotY = tabElement.icon.y - barHeight / 2 + 10;
+      const dotY = tabElement.icon.y - barHeight / 2 + 10 + bgYOffset;
 
-      const notificationDot = this.scene.add.circle(dotX, dotY, 6, 0xff0000);
-      notificationDot.setStrokeStyle(2, 0xffffff, 1);
-      this.add(notificationDot);
+      // Remove existing elements if switching between text/no-text
+      if (tabElement.notificationDot) {
+        tabElement.notificationDot.destroy();
+        tabElement.notificationDot = null;
+      }
+      if (tabElement.notificationText) {
+        tabElement.notificationText.destroy();
+        tabElement.notificationText = null;
+      }
 
-      tabElement.notificationDot = notificationDot;
+      // Create appropriate notification style
+      if (hasText) {
+        // Larger badge with text
+        tabElement.notificationDot = this.scene.add.circle(dotX, dotY, 13, 0xff0000);
+        tabElement.notificationDot.setStrokeStyle(2, 0xffffff, 1);
+        this.add(tabElement.notificationDot);
+
+        tabElement.notificationText = this.scene.add.text(dotX, dotY, text, {
+          fontFamily: 'LINESeed',
+          fontSize: '9px',
+          color: '#ffffff',
+          fontStyle: 'bold',
+          resolution: window.devicePixelRatio
+        }).setOrigin(0.5);
+        this.add(tabElement.notificationText);
+      } else {
+        // Small dot without text
+        tabElement.notificationDot = this.scene.add.circle(dotX, dotY, 6, 0xff0000);
+        tabElement.notificationDot.setStrokeStyle(2, 0xffffff, 1);
+        this.add(tabElement.notificationDot);
+      }
     }
   }
 

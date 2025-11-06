@@ -42,6 +42,16 @@ export default class MainScene extends Phaser.Scene {
     this.userLevelState = withPersistentState(this, 'userLevel', 1);
     this.totalChestsOpenedState = withPersistentState(this, 'totalChestsOpened', 0);
 
+    // Initialize persistent state for tab notifications
+    // Each tab can have: { show: boolean, text: string|null }
+    this.tabNotificationsState = withPersistentState(this, 'tabNotifications', {
+      main: { show: false, text: null },
+      stickers: { show: true, text: 'NEW' },
+      wheel: { show: false, text: null },
+      earn: { show: false, text: null },
+      shop: { show: false, text: null }
+    });
+
     // Calculate offline energy regeneration (will show notification after UI is created)
     this.offlineEnergyGained = this.calculateOfflineRegeneration();
 
@@ -703,6 +713,9 @@ export default class MainScene extends Phaser.Scene {
     const barHeight = 100; // Increased height for better spacing
     const menuY = screenHeight - (barHeight / 2); // Position so bottom edge is at screen bottom
 
+    // Get current notification states from persistent storage
+    const notifState = this.tabNotificationsState.get();
+
     // Create bottom tab menu with 5 tabs
     this.bottomTabMenu = new BottomTabMenu(this, centerX, menuY, {
       tabs: [
@@ -710,7 +723,8 @@ export default class MainScene extends Phaser.Scene {
           key: 'main',
           icon: 'icon_heart',
           label: 'MAIN',
-          showNotification: false,
+          showNotification: notifState.main.show,
+          notificationText: notifState.main.text,
           onTap: (key) => {
             console.log(`${key} tab tapped`);
             // Already in MainScene, so just log for now
@@ -720,7 +734,8 @@ export default class MainScene extends Phaser.Scene {
           key: 'stickers',
           icon: 'icon_picture',
           label: 'STICKERS',
-          showNotification: true,
+          showNotification: notifState.stickers.show,
+          notificationText: notifState.stickers.text,
           onTap: (key) => {
             console.log(`${key} tab tapped`);
             // TODO: Navigate to StickersScene when created
@@ -731,7 +746,8 @@ export default class MainScene extends Phaser.Scene {
           key: 'wheel',
           icon: 'icon_setting',
           label: 'WHEEL',
-          showNotification: false,
+          showNotification: notifState.wheel.show,
+          notificationText: notifState.wheel.text,
           onTap: (key) => {
             console.log(`${key} tab tapped`);
             // TODO: Navigate to WheelScene when created
@@ -742,7 +758,8 @@ export default class MainScene extends Phaser.Scene {
           key: 'earn',
           icon: 'icon_gold',
           label: 'EARN',
-          showNotification: true,
+          showNotification: notifState.earn.show,
+          notificationText: notifState.earn.text,
           onTap: (key) => {
             console.log(`${key} tab tapped`);
             // TODO: Navigate to EarnScene when created
@@ -754,7 +771,8 @@ export default class MainScene extends Phaser.Scene {
           icon: 'icon_shop',
           iconSize: 38, // Make shop icon larger (256px asset needs more size)
           label: 'SHOP',
-          showNotification: false,
+          showNotification: notifState.shop.show,
+          notificationText: notifState.shop.text,
           onTap: (key) => {
             console.log(`${key} tab tapped`);
             // TODO: Navigate to ShopScene when created
@@ -769,6 +787,34 @@ export default class MainScene extends Phaser.Scene {
     // Set to stay fixed at bottom
     this.bottomTabMenu.setScrollFactor(0);
     this.bottomTabMenu.setDepth(1000); // Same as StatusBar
+  }
+
+  /**
+   * Update tab notification state dynamically
+   * @param {string} tabKey - Tab key (main, stickers, wheel, earn, shop)
+   * @param {boolean} show - Show notification (true) or hide (false)
+   * @param {string|null} text - Optional text to display in badge (e.g., 'NEW')
+   */
+  setTabNotification(tabKey, show, text = null) {
+    // Get current state
+    const notifState = this.tabNotificationsState.get();
+
+    // Update the specified tab
+    if (notifState[tabKey] !== undefined) {
+      notifState[tabKey] = { show, text };
+
+      // Persist to localStorage
+      this.tabNotificationsState.set(notifState);
+
+      // Update the visual notification badge if menu exists
+      if (this.bottomTabMenu) {
+        this.bottomTabMenu.setNotification(tabKey, show, text);
+      }
+
+      console.log(`Tab notification updated: ${tabKey} - show: ${show}, text: ${text}`);
+    } else {
+      console.warn(`Invalid tab key: ${tabKey}`);
+    }
   }
 
   getTelegramUserData() {

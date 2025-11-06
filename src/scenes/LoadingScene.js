@@ -100,6 +100,7 @@ export default class LoadingScene extends Phaser.Scene {
     loader.image('icon_setting', '/assets/Components/IconMisc/Icon_Setting01.Png');
     loader.image('icon_gold', '/assets/Components/IconMisc/Icon_Gold.png');
     loader.image('icon_shop', '/assets/Components/Icon_ItemIcons/256/ItemIcon_Shop02.Png');
+    loader.image('tab_separator', '/assets/Components/Demo_Image/glow_bottom.png');
 
     // Mega jackpot light background
     loader.image('jackpot_light', '/assets/Components/Demo_Image/Image_Light.png');
