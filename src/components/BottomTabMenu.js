@@ -75,20 +75,23 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
     const layout = this.calculateLayout();
     const { totalWidth, barHeight } = layout;
 
+    // Add extra width to eliminate edge gaps (extend beyond screen edges)
+    const bgWidth = totalWidth + 20; // 10px extra on each side
+
     // Create NineSlice background (same asset as StatusBar)
     if (this.scene.textures.exists(this.config.bgTexture)) {
       this.background = this.scene.add.nineslice(
         0, 0,
         this.config.bgTexture,
         null,
-        totalWidth, barHeight,
+        bgWidth, barHeight,
         11, 11, 15, 15 // NineSlice values for statusbar_bg_small
       ).setOrigin(0.5);
     } else {
       // Fallback: dark rounded rectangle
       const graphics = this.scene.add.graphics();
       graphics.fillStyle(0x000000, 0.9);
-      graphics.fillRoundedRect(-totalWidth / 2, -barHeight / 2, totalWidth, barHeight, 10);
+      graphics.fillRoundedRect(-bgWidth / 2, -barHeight / 2, bgWidth, barHeight, 10);
       this.background = graphics;
     }
 
