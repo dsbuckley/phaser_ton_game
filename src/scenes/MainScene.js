@@ -681,7 +681,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Set status bar to stay at top (fixed position)
     this.statusBar.setScrollFactor(0);
-    this.statusBar.setDepth(1000); // Ensure it's always on top
+    this.statusBar.setDepth(2000); // Always in front of everything (coins, tab menu, etc.)
 
     // Battery bar removed - energy now shown in status bar
     // this.createBatteryBar();
@@ -1163,8 +1163,8 @@ export default class MainScene extends Phaser.Scene {
       // Create coin sprite
       const coin = this.physics.add.sprite(chestX, chestY, 'statusbar_coin');
 
-      // Set depth to render in front of palm tree (palm tree is at depth 100)
-      coin.setDepth(150);
+      // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
+      coin.setDepth(1100);
 
       // Random scale for variety
       const scale = Phaser.Math.FloatBetween(0.3, 0.5);
@@ -1234,7 +1234,7 @@ export default class MainScene extends Phaser.Scene {
         strokeThickness: isBigPayout ? 8 : 6, // Thicker stroke for big payouts
         padding: { x: 20, y: 20 },
         resolution: 2
-      }).setOrigin(0.5).setDepth(150); // Render in front of palm tree
+      }).setOrigin(0.5).setDepth(1200); // Same depth as mega jackpot text, in front of coins
 
       // Animate text floating upward and fading out
       // Big payouts go higher and stay longer
@@ -1273,7 +1273,7 @@ export default class MainScene extends Phaser.Scene {
 
     const lightBg = this.add.image(screenCenterX, screenCenterY, 'jackpot_light')
       .setOrigin(0.5)
-      .setDepth(300); // In front of everything
+      .setDepth(1300); // In front of coins (1100) but behind status bar (2000)
 
     // Scale to cover entire screen
     const scaleX = this.cameras.main.width / lightBg.width;
@@ -1327,7 +1327,7 @@ export default class MainScene extends Phaser.Scene {
       align: 'center',
       padding: { x: 15, y: 15 },
       resolution: 2
-    }).setOrigin(0.5).setDepth(200);
+    }).setOrigin(0.5).setDepth(1200); // In front of coins (1100) but behind status bar (2000)
 
     // Pulsing text animation
     this.tweens.add({
