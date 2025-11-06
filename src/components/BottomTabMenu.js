@@ -277,6 +277,11 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
         ease: 'Back.out'
       });
 
+      // Trigger haptic feedback (same as chest click)
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+      }
+
       // Trigger callback if provided
       if (tab.onTap && typeof tab.onTap === 'function') {
         tab.onTap(tab.key);
