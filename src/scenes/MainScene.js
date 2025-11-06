@@ -1040,6 +1040,9 @@ export default class MainScene extends Phaser.Scene {
         this.player.anims.stop();
       }
 
+      // Disable chest interactivity during mega jackpot
+      this.player.disableInteractive();
+
       // Directly set chest to more open frame
       // Loaded frames are: 1, 3, 5, 7, 9, 11, 13, 15, 17, 19, 21, 23, 25, 27, 29, 31, 33, 35, 37
       // Using frame 27 for a more open chest
@@ -1285,8 +1288,9 @@ export default class MainScene extends Phaser.Scene {
               onComplete: () => megaText.destroy()
             });
 
-            // Re-enable chest clicking
+            // Re-enable chest clicking and interactivity
             this.isJackpotPlaying = false;
+            this.player.setInteractive({ useHandCursor: true });
           });
         }
       },
