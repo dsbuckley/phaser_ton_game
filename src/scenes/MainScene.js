@@ -1161,6 +1161,9 @@ export default class MainScene extends Phaser.Scene {
     // Determine if emerald reward should spawn (10% chance for non-mega jackpots)
     const isEmeraldReward = !isMegaJackpot && (Math.random() < 0.1);
 
+    // Determine if energy reward should spawn (10% chance for non-mega jackpots)
+    const isEnergyReward = !isMegaJackpot && (Math.random() < 0.1);
+
     // Handle mega jackpot differently
     if (isMegaJackpot) {
       // Stop any existing animations
@@ -1194,6 +1197,11 @@ export default class MainScene extends Phaser.Scene {
         // 10% chance: ALSO spawn emerald (makes it harder to catch)
         if (isEmeraldReward) {
           this.createEmeraldReward();
+        }
+
+        // 10% chance: ALSO spawn energy (makes it harder to catch)
+        if (isEnergyReward) {
+          this.createEnergyReward();
         }
       });
 
@@ -1422,6 +1430,137 @@ export default class MainScene extends Phaser.Scene {
           ease: 'Power2',
           onComplete: () => {
             emerald.destroy();
+          }
+        });
+      }
+    });
+  }
+
+  createEnergyReward() {
+    console.log('Creating energy reward!');
+
+    // Get chest position
+    const chestX = this.player.x;
+    const chestY = this.player.y;
+
+    // Create single energy sprite with physics
+    const energy = this.physics.add.sprite(chestX, chestY, 'statusbar_energy');
+    console.log('Energy sprite created at:', chestX, chestY);
+
+    // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
+    energy.setDepth(1100);
+
+    // Larger scale for visibility (same size as emerald)
+    const scale = 0.9;
+
+    // Set upward physics velocity (jackpot level - higher than normal coins)
+    const velocityX = Phaser.Math.Between(-200, 200); // Moderate horizontal drift
+    const velocityY = Phaser.Math.Between(-700, -900); // Launch high (jackpot level)
+    energy.setVelocity(velocityX, velocityY);
+
+    // Apply gravity for realistic arc
+    energy.setGravityY(900);
+
+    // Gentle spin for visual interest
+    energy.setAngularVelocity(180);
+
+    // Make it interactive (clickable)
+    energy.setInteractive({ useHandCursor: true });
+
+    // Pop-in scale animation
+    energy.setScale(0);
+    this.tweens.add({
+      targets: energy,
+      scaleX: scale,
+      scaleY: scale,
+      duration: 150,
+      ease: 'Back.out',
+      onComplete: () => {
+        // Zoom towards camera effect - scale up 2x to simulate approaching
+        this.tweens.add({
+          targets: energy,
+          scaleX: scale * 2.0,
+          scaleY: scale * 2.0,
+          duration: 1000,
+          ease: 'Power2.easeIn',
+          delay: 200
+        });
+      }
+    });
+
+    // Click handler - collect energy
+    energy.on('pointerdown', () => {
+      console.log('Energy clicked!');
+
+      // Unlock audio if needed
+      if (!this.audioUnlocked) {
+        this.sound.context.resume().then(() => {
+          this.audioUnlocked = true;
+          console.log('Audio unlocked');
+        }).catch(err => {
+          console.warn('Failed to unlock audio:', err);
+        });
+      }
+
+      // Play energy collection sound
+      try {
+        this.sound.play('energy_collect_sound');
+        console.log('Playing energy sound');
+      } catch (err) {
+        console.error('Failed to play energy sound:', err);
+      }
+
+      // Update energy state (+1, no cap)
+      const currentEnergy = this.batteryState.get();
+      const newTotal = currentEnergy + 1;
+      this.batteryState.set(newTotal);
+      console.log(`Energy updated: ${currentEnergy} -> ${newTotal}`);
+
+      // Update StatusBar energy display (even if over 100)
+      this.statusBar.setResource('energy', newTotal, true);
+
+      // Update BatteryBar display (will show over 100) - only if it exists
+      if (this.batteryBar && this.batteryBar.setBattery) {
+        this.batteryBar.setBattery(newTotal, 100, true);
+      }
+
+      // Create floating "+1 Energy" text (green color)
+      const floatingText = this.add.text(chestX, chestY, '+1 Energy', {
+        fontFamily: 'Tilt Warp',
+        fontSize: '48px',
+        fill: '#00FF00', // Green color for energy
+        stroke: '#000000',
+        strokeThickness: 6,
+        padding: { x: 20, y: 20 },
+        resolution: 2
+      }).setOrigin(0.5).setDepth(1200);
+
+      // Animate text floating upward and fading out (big payout style)
+      this.tweens.add({
+        targets: floatingText,
+        y: chestY - 450, // Float much higher (same as big payout)
+        alpha: 0,
+        duration: 2000, // Stay 2 seconds (same as big payout)
+        ease: 'Sine.easeOut',
+        onComplete: () => floatingText.destroy()
+      });
+
+      // Destroy energy immediately on click
+      energy.destroy();
+      console.log('Energy destroyed');
+    });
+
+    // Fade out and destroy if not clicked - 1500ms delay matches coin confetti
+    this.time.delayedCall(1500, () => {
+      // Only fade if energy still exists (not clicked)
+      if (energy && energy.active) {
+        this.tweens.add({
+          targets: energy,
+          alpha: 0,
+          duration: 500,
+          ease: 'Power2',
+          onComplete: () => {
+            energy.destroy();
           }
         });
       }
