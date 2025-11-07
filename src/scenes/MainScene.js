@@ -937,13 +937,17 @@ export default class MainScene extends Phaser.Scene {
       if (stats) {
         // User has existing stats - load them into the game
         console.log('Loading existing stats from database:', stats);
+        console.log('Database energy value:', stats.energy);
 
         this.coinsState.set(stats.coins || 0);
         this.ticketsState.set(stats.tickets || 0);
         this.gemsState.set(stats.gems || 0);
-        this.batteryState.set(stats.energy || 100);
+        // Use ?? instead of || to properly handle 0 values
+        this.batteryState.set(stats.energy ?? 100);
         this.userLevelState.set(stats.user_level || 1);
         this.totalChestsOpenedState.set(stats.total_chests_opened || 0);
+
+        console.log('Energy loaded from database and set to:', this.batteryState.get());
 
         // Calculate server-side hourly energy grants using last_energy_grant_hour
         if (stats.last_energy_grant_hour && stats.energy < 100) {
