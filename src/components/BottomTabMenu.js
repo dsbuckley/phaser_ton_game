@@ -146,11 +146,12 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
       x, y,
       'tab_focus',
       null,
-      width - 10, height - 20,
-      10, 10, 10, 10 // NineSlice values - adjust as needed
+      width, height,
+      15, 15, 15, 15 // Equal slices to prevent tapering
     );
     highlightBg.setVisible(false);
     highlightBg.setOrigin(0.5);
+    highlightBg.setScale(0.95); // Scale to 95% for a wider fit
     this.add(highlightBg);
 
     // Create invisible interactive area for the entire tab
