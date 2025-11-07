@@ -329,12 +329,17 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
+    img.style.border = '2px solid white';
+    img.style.boxSizing = 'border-box';
 
     img.onload = () => {
       console.log('StatusBar: Telegram avatar loaded successfully');
-      // Hide the Phaser avatar image (we're using HTML overlay now)
+      // Hide the Phaser avatar image and frame (we're using HTML overlay now)
       if (this.avatarImage) {
         this.avatarImage.setVisible(false);
+      }
+      if (this.avatarFrame) {
+        this.avatarFrame.setVisible(false);
       }
     };
 
@@ -343,6 +348,10 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       // Keep Phaser avatar visible as fallback
       if (this.htmlAvatarContainer && this.htmlAvatarContainer.parentNode) {
         this.htmlAvatarContainer.parentNode.removeChild(this.htmlAvatarContainer);
+      }
+      // Ensure default avatar frame is visible
+      if (this.avatarFrame) {
+        this.avatarFrame.setVisible(true);
       }
     };
 
