@@ -182,9 +182,13 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     toggleBg.setScale(0.45);  // Scale down more
     this.add(toggleBg);
 
-    // Toggle switch button inside container - smaller
+    // Toggle switch button inside container
+    // Calculate slide range: button moves left/right within the background
+    const slideDistance = 25; // Distance to slide in each direction
+    const initialX = initialState ? toggleX + slideDistance : toggleX - slideDistance;
+
     const toggleSwitch = this.scene.add.image(
-      toggleX,
+      initialX,
       y,
       initialState ? 'toggle_button_on' : 'toggle_button_off'
     );
@@ -199,9 +203,18 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     toggleBg.on('pointerdown', () => {
       isEnabled = !isEnabled;
 
-      // Swap both background AND button textures
+      // Swap background texture
       toggleBg.setTexture(isEnabled ? 'toggle_bg_on' : 'toggle_bg_off');
       toggleSwitch.setTexture(isEnabled ? 'toggle_button_on' : 'toggle_button_off');
+
+      // Animate button sliding to new position
+      const targetX = isEnabled ? toggleX + slideDistance : toggleX - slideDistance;
+      this.scene.tweens.add({
+        targets: toggleSwitch,
+        x: targetX,
+        duration: 150,
+        ease: 'Cubic.out'
+      });
 
       // Trigger callback
       onToggle(isEnabled);
