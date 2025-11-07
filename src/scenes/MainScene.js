@@ -1158,6 +1158,9 @@ export default class MainScene extends Phaser.Scene {
       coinReward = Phaser.Math.Between(1, 9);
     }
 
+    // Determine if emerald reward should spawn (10% chance for non-mega jackpots)
+    const isEmeraldReward = !isMegaJackpot && (Math.random() < 0.1);
+
     // Handle mega jackpot differently
     if (isMegaJackpot) {
       // Stop any existing animations
@@ -1183,9 +1186,15 @@ export default class MainScene extends Phaser.Scene {
       // Restart chest opening animation (restarts if already playing)
       this.player.play('chest_open', true);
 
-      // Trigger coin confetti after 300ms delay with the coin reward amount
+      // Trigger reward after 300ms delay
       this.time.delayedCall(300, () => {
+        // Always spawn coin confetti
         this.createCoinConfetti(coinReward, isBigPayout);
+
+        // 10% chance: ALSO spawn emerald (makes it harder to catch)
+        if (isEmeraldReward) {
+          this.createEmeraldReward();
+        }
       });
 
       // Play closing animation after opening completes
@@ -1304,6 +1313,119 @@ export default class MainScene extends Phaser.Scene {
       // Update StatusBar with animation
       this.statusBar.setResource('coins', newTotal, true);
     }
+  }
+
+  createEmeraldReward() {
+    // Get chest position
+    const chestX = this.player.x;
+    const chestY = this.player.y;
+
+    // Create single emerald sprite with physics
+    const emerald = this.physics.add.sprite(chestX, chestY, 'statusbar_gem');
+
+    // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
+    emerald.setDepth(1100);
+
+    // Larger scale for visibility (emerald is special/rare)
+    const scale = 0.9;
+
+    // Set upward physics velocity (jackpot level - higher than normal coins)
+    const velocityX = Phaser.Math.Between(-200, 200); // Moderate horizontal drift
+    const velocityY = Phaser.Math.Between(-700, -900); // Launch high (jackpot level)
+    emerald.setVelocity(velocityX, velocityY);
+
+    // Apply gravity for realistic arc
+    emerald.setGravityY(900);
+
+    // Gentle spin for visual interest
+    emerald.setAngularVelocity(180);
+
+    // Make it interactive (clickable)
+    emerald.setInteractive({ useHandCursor: true });
+
+    // Pop-in scale animation
+    emerald.setScale(0);
+    this.tweens.add({
+      targets: emerald,
+      scaleX: scale,
+      scaleY: scale,
+      duration: 150,
+      ease: 'Back.out',
+      onComplete: () => {
+        // Zoom towards camera effect - scale up 2x to simulate approaching
+        this.tweens.add({
+          targets: emerald,
+          scaleX: scale * 2.0,
+          scaleY: scale * 2.0,
+          duration: 1000,
+          ease: 'Power2.easeIn',
+          delay: 200
+        });
+      }
+    });
+
+    // Click handler - collect emerald
+    emerald.on('pointerdown', () => {
+      // Unlock audio if needed
+      if (!this.audioUnlocked) {
+        this.sound.context.resume().then(() => {
+          this.audioUnlocked = true;
+        }).catch(err => {
+          console.warn('Failed to unlock audio:', err);
+        });
+      }
+
+      // Play emerald collection sound
+      this.sound.play('emerald_sound');
+
+      // Update gems state
+      const currentGems = this.gemsState.get();
+      const newTotal = currentGems + 1;
+      this.gemsState.set(newTotal);
+
+      // Update StatusBar with animation
+      this.statusBar.setResource('gems', newTotal, true);
+
+      // Create floating "+1 Emerald" text (matching coin text style)
+      const floatingText = this.add.text(chestX, chestY, '+1 Emerald', {
+        fontFamily: 'Tilt Warp',
+        fontSize: '48px',
+        fill: '#FFFFFF', // White to match normal coin text
+        stroke: '#000000',
+        strokeThickness: 6,
+        padding: { x: 20, y: 20 },
+        resolution: 2
+      }).setOrigin(0.5).setDepth(1200);
+
+      // Animate text floating upward and fading out (big payout style)
+      this.tweens.add({
+        targets: floatingText,
+        y: chestY - 450, // Float much higher (same as big payout)
+        alpha: 0,
+        duration: 2000, // Stay 2 seconds (same as big payout)
+        ease: 'Sine.easeOut',
+        onComplete: () => floatingText.destroy()
+      });
+
+      // Destroy emerald immediately on click
+      emerald.destroy();
+    });
+
+    // Fade out and destroy if not clicked - 1500ms delay matches coin confetti
+    this.time.delayedCall(1500, () => {
+      // Only fade if emerald still exists (not clicked)
+      if (emerald && emerald.active) {
+        this.tweens.add({
+          targets: emerald,
+          alpha: 0,
+          duration: 500,
+          ease: 'Power2',
+          onComplete: () => {
+            emerald.destroy();
+          }
+        });
+      }
+    });
   }
 
   streamMegaJackpotCoins(totalAmount) {
