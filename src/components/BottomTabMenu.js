@@ -282,14 +282,19 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
         this.scene.sound.context.resume().then(() => {
           this.scene.audioUnlocked = true;
           console.log('Audio unlocked via tab menu');
+
+          // Play button sound after unlocking
+          if (this.scene.sound) {
+            this.scene.sound.play('button_sound');
+          }
         }).catch(err => {
           console.warn('Failed to unlock audio:', err);
         });
-      }
-
-      // Play button click sound
-      if (this.scene.sound && this.scene.sound.get('button_sound')) {
-        this.scene.sound.play('button_sound');
+      } else {
+        // Audio already unlocked, just play the sound
+        if (this.scene.sound) {
+          this.scene.sound.play('button_sound');
+        }
       }
 
       // Trigger haptic feedback (same as chest click)
