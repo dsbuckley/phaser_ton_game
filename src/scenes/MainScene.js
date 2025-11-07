@@ -531,15 +531,6 @@ export default class MainScene extends Phaser.Scene {
       // Make chest interactive
       this.player.setInteractive({ useHandCursor: true });
 
-      // Add hover effect
-      this.player.on('pointerover', () => {
-        this.player.setTint(0xffddaa); // Slight golden tint on hover
-      });
-
-      this.player.on('pointerout', () => {
-        this.player.clearTint();
-      });
-
       // Press up effect (scale up instead of down)
       this.player.on('pointerdown', () => {
         // Kill any existing tweens to prevent stacking
