@@ -140,6 +140,19 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
     const iconY = y - 10; // Position icon slightly above center
     const labelY = y + 18; // Position label below icon
 
+    // Create active tab highlight background using NineSlice (initially hidden)
+    // Add this FIRST so it's behind everything
+    const highlightBg = this.scene.add.nineslice(
+      x, y,
+      'tab_focus',
+      null,
+      width - 10, height - 20,
+      10, 10, 10, 10 // NineSlice values - adjust as needed
+    );
+    highlightBg.setVisible(false);
+    highlightBg.setOrigin(0.5);
+    this.add(highlightBg);
+
     // Create invisible interactive area for the entire tab
     const hitArea = this.scene.add.rectangle(x, y, width, height, 0xffffff, 0);
     hitArea.setInteractive({ useHandCursor: true });
@@ -204,21 +217,6 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
 
     // Add interaction effects
     this.addTabInteractions(hitArea, icon, label, tab);
-
-    // Create active tab highlight background using NineSlice (initially hidden)
-    const highlightBg = this.scene.add.nineslice(
-      x, y,
-      'tab_focus',
-      null,
-      width - 10, height - 20,
-      10, 10, 10, 10 // NineSlice values - adjust as needed
-    );
-    highlightBg.setVisible(false);
-    highlightBg.setOrigin(0.5);
-    this.add(highlightBg);
-
-    // Move highlight to back so it's behind icon and label
-    this.moveDown(highlightBg);
 
     return {
       key: tab.key,
