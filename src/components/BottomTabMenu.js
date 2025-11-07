@@ -277,6 +277,16 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
         ease: 'Back.out'
       });
 
+      // Resume AudioContext on first interaction (required by browsers)
+      if (!this.scene.audioUnlocked) {
+        this.scene.sound.context.resume().then(() => {
+          this.scene.audioUnlocked = true;
+          console.log('Audio unlocked via tab menu');
+        }).catch(err => {
+          console.warn('Failed to unlock audio:', err);
+        });
+      }
+
       // Play button click sound
       if (this.scene.sound && this.scene.sound.get('button_sound')) {
         this.scene.sound.play('button_sound');
