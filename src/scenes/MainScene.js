@@ -1245,8 +1245,8 @@ export default class MainScene extends Phaser.Scene {
     const rand = Math.random();
     let coinReward, isMegaJackpot = false, isBigPayout = false;
 
-    if (rand < 0.05) {
-      // 5% mega jackpot
+    if (rand < 0.02) {
+      // 2% mega jackpot
       isMegaJackpot = true;
       coinReward = Phaser.Utils.Array.GetRandom([1500, 2000, 2500, 3000, 5000]);
     } else if (rand < 0.20) {
