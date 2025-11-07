@@ -58,8 +58,8 @@ export default class MainScene extends Phaser.Scene {
       shop: { show: false, text: null }
     });
 
-    // Calculate hourly energy grants (will show notification after UI is created)
-    this.offlineEnergyGained = this.calculateHourlyEnergyGrants();
+    // Initialize offline energy to 0 (will be calculated from database in initializeUser)
+    this.offlineEnergyGained = 0;
 
     // Initialize Supabase client
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
@@ -1089,6 +1089,20 @@ export default class MainScene extends Phaser.Scene {
     this.countdownUpdateTimer = this.time.addEvent({
       delay: 1000, // 1 second
       callback: () => {
+        // Check for hourly energy grants (grants 5 energy per hour)
+        const energyGranted = this.calculateHourlyEnergyGrants();
+
+        if (energyGranted > 0) {
+          // Update UI with new energy amount
+          const newEnergy = this.batteryState.get();
+          this.statusBar.setResource('energy', newEnergy, true);
+          this.updateEnergyTimerVisibility();
+
+          // Show notification or visual feedback
+          console.log(`You received ${energyGranted} free energy!`);
+        }
+
+        // Update countdown timer display
         if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
           this.energyCountdownTimer.updateCountdown();
         }
