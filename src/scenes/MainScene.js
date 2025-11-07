@@ -1208,9 +1208,15 @@ export default class MainScene extends Phaser.Scene {
           this.createEmeraldReward();
         }
 
-        // 10% chance: ALSO spawn energy (makes it harder to catch)
+        // 10% chance: ALSO spawn energy (1-3 items randomly)
         if (isEnergyReward) {
-          this.createEnergyReward();
+          const energyCount = Phaser.Math.Between(1, 3);
+          for (let i = 0; i < energyCount; i++) {
+            // Stagger spawns slightly for better visual effect
+            this.time.delayedCall(i * 50, () => {
+              this.createEnergyReward();
+            });
+          }
         }
       });
 
@@ -1403,11 +1409,11 @@ export default class MainScene extends Phaser.Scene {
       // Update StatusBar with animation
       this.statusBar.setResource('gems', newTotal, true);
 
-      // Create floating "+1 Emerald" text (matching coin text style)
+      // Create floating "+1 Emerald" text (bright green color)
       const floatingText = this.add.text(chestX, chestY, '+1 Emerald', {
         fontFamily: 'Tilt Warp',
         fontSize: '48px',
-        fill: '#FFFFFF', // White to match normal coin text
+        fill: '#a1fe26', // Bright green for emerald
         stroke: '#000000',
         strokeThickness: 6,
         padding: { x: 20, y: 20 },
@@ -1521,11 +1527,11 @@ export default class MainScene extends Phaser.Scene {
         this.batteryBar.setBattery(newTotal, 100, true);
       }
 
-      // Create floating "+1 Energy" text (green color)
+      // Create floating "+1 Energy" text (cyan color)
       const floatingText = this.add.text(chestX, chestY, '+1 Energy', {
         fontFamily: 'Tilt Warp',
         fontSize: '48px',
-        fill: '#00FF00', // Green color for energy
+        fill: '#4df0ff', // Cyan color for energy
         stroke: '#000000',
         strokeThickness: 6,
         padding: { x: 20, y: 20 },
