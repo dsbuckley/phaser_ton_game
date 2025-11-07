@@ -110,6 +110,7 @@ export default class LoadingScene extends Phaser.Scene {
     loader.audio('chest_sound_big', '/assets/sounds/treasure_chest_4.mp3');
     loader.audio('mega_jackpot_sound', '/assets/sounds/mega_jackpot.mp3');
     loader.audio('yeah_sound', '/assets/sounds/yeah.mp3');
+    loader.audio('button_sound', '/assets/sounds/button.mp3');
 
     // Sparkle effect
     loader.image('sparkle', '/assets/sparkle.webp');

@@ -277,6 +277,11 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
         ease: 'Back.out'
       });
 
+      // Play button click sound
+      if (this.scene.sound && this.scene.sound.get('button_sound')) {
+        this.scene.sound.play('button_sound');
+      }
+
       // Trigger haptic feedback (same as chest click)
       if (window.Telegram?.WebApp?.HapticFeedback) {
         window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
