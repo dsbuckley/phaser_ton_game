@@ -386,8 +386,8 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const worldY = this.statusBarY + avatarY;
 
     // Convert to screen coordinates
-    const screenX = canvasRect.left + worldX - 21; // -21 to center (42px / 2)
-    const screenY = canvasRect.top + worldY - 21;
+    const screenX = canvasRect.left + worldX - 24; // -24 to center (48px / 2)
+    const screenY = canvasRect.top + worldY - 24;
 
     this.htmlAvatarContainer.style.left = screenX + 'px';
     this.htmlAvatarContainer.style.top = screenY + 'px';

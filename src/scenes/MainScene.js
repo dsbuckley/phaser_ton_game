@@ -718,6 +718,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create bottom tab menu with 5 tabs
     this.bottomTabMenu = new BottomTabMenu(this, centerX, menuY, {
+      activeTab: 'main', // Set main as the default active tab
       tabs: [
         {
           key: 'main',
@@ -1403,7 +1404,7 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // Streaming configuration
-    const coinsPerBurst = 50; // Spawn 100 coins per burst
+    const coinsPerBurst = 100; // Spawn 100 coins per burst
     const burstInterval = 100; // Every 100ms
     const totalBursts = totalAmount / coinsPerBurst;
     let burstsCompleted = 0;

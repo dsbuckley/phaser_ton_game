@@ -47,9 +47,17 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
     // Store tab elements for later access
     this.tabElements = [];
 
+    // Track currently active tab
+    this.activeTabKey = config.activeTab || null;
+
     // Create UI elements
     this.createBackground();
     this.createTabs();
+
+    // Set initial active tab if specified
+    if (this.activeTabKey) {
+      this.setActiveTab(this.activeTabKey);
+    }
   }
 
   /**
@@ -197,6 +205,21 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
     // Add interaction effects
     this.addTabInteractions(hitArea, icon, label, tab);
 
+    // Create active tab highlight background using NineSlice (initially hidden)
+    const highlightBg = this.scene.add.nineslice(
+      x, y,
+      'tab_focus',
+      null,
+      width - 10, height - 20,
+      10, 10, 10, 10 // NineSlice values - adjust as needed
+    );
+    highlightBg.setVisible(false);
+    highlightBg.setOrigin(0.5);
+    this.add(highlightBg);
+
+    // Move highlight to back so it's behind icon and label
+    this.moveDown(highlightBg);
+
     return {
       key: tab.key,
       hitArea: hitArea,
@@ -204,6 +227,7 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
       label: label,
       notificationDot: notificationDot,
       notificationText: notificationText,
+      highlightBg: highlightBg,
       config: tab
     };
   }
@@ -220,15 +244,13 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
     const iconOriginalScale = icon.scale;
     const labelOriginalScale = label.scale;
 
-    // Hover effect
+    // Hover effect (optional - can add subtle hover state if needed)
     hitArea.on('pointerover', () => {
-      icon.setTint(0xdddddd);
-      label.setTint(0xdddddd);
+      // Currently no hover effect to keep it clean
     });
 
     hitArea.on('pointerout', () => {
-      icon.clearTint();
-      label.clearTint();
+      // Currently no hover effect to keep it clean
     });
 
     // Tap effect (scale down then bounce back)
@@ -301,6 +323,9 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
       if (window.Telegram?.WebApp?.HapticFeedback) {
         window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
       }
+
+      // Set this tab as active
+      this.setActiveTab(tab.key);
 
       // Trigger callback if provided
       if (tab.onTap && typeof tab.onTap === 'function') {
@@ -385,11 +410,28 @@ export default class BottomTabMenu extends Phaser.GameObjects.Container {
   }
 
   /**
-   * Set active tab (future feature for highlighting)
+   * Set active tab with visual highlighting
    * @param {string} tabKey - Tab key identifier
    */
   setActiveTab(tabKey) {
-    // TODO: Implement active state visual (tint, underline, scale, etc.)
-    console.log(`Active tab set to: ${tabKey}`);
+    // Hide all tab highlight backgrounds first
+    this.tabElements.forEach(tabElement => {
+      if (tabElement.highlightBg) {
+        tabElement.highlightBg.setVisible(false);
+      }
+    });
+
+    // Set new active tab
+    const activeTab = this.tabElements.find(t => t.key === tabKey);
+    if (activeTab) {
+      // Show highlight background for active tab
+      if (activeTab.highlightBg) {
+        activeTab.highlightBg.setVisible(true);
+      }
+
+      // Update active tab tracker
+      this.activeTabKey = tabKey;
+      console.log(`Active tab set to: ${tabKey}`);
+    }
   }
 }
