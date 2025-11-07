@@ -1761,7 +1761,7 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // Streaming configuration
-    const coinsPerBurst = 100; // Spawn 100 coins per burst
+    const coinsPerBurst = 50; // Spawn 100 coins per burst
     const burstInterval = 100; // Every 100ms
     const totalBursts = totalAmount / coinsPerBurst;
     let burstsCompleted = 0;
