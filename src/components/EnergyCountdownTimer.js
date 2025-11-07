@@ -44,10 +44,10 @@ export default class EnergyCountdownTimer extends Phaser.GameObjects.Container {
     // Text positioned INSIDE the progress bar (centered)
     this.countdownText = this.scene.add.text(0, 0, 'Free energy in 59:59', {
       fontFamily: 'LINESeed',
-      fontSize: '32px',
+      fontSize: '42px',
       fill: '#FFFFFF',
       stroke: '#000000',
-      strokeThickness: 5,
+      strokeThickness: 0,
       resolution: 2
     }).setOrigin(0.5, 0.5); // Center both horizontally and vertically
     this.add(this.countdownText);
