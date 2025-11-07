@@ -317,20 +317,21 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     // Position it over the Phaser canvas at the avatar location
     this.htmlAvatarContainer = document.createElement('div');
     this.htmlAvatarContainer.style.position = 'absolute';
-    this.htmlAvatarContainer.style.width = '45px';
-    this.htmlAvatarContainer.style.height = '45px';
+    this.htmlAvatarContainer.style.width = '48px';
+    this.htmlAvatarContainer.style.height = '48px';
     this.htmlAvatarContainer.style.borderRadius = '50%';
+    this.htmlAvatarContainer.style.border = '2px solid white';
     this.htmlAvatarContainer.style.overflow = 'hidden';
     this.htmlAvatarContainer.style.pointerEvents = 'none'; // Don't block clicks
     this.htmlAvatarContainer.style.zIndex = '1001'; // Above Phaser canvas
+    this.htmlAvatarContainer.style.boxSizing = 'border-box';
 
     const img = document.createElement('img');
     img.src = photoUrl;
     img.style.width = '100%';
     img.style.height = '100%';
     img.style.objectFit = 'cover';
-    img.style.border = '2px solid white';
-    img.style.boxSizing = 'border-box';
+    img.style.display = 'block';
 
     img.onload = () => {
       console.log('StatusBar: Telegram avatar loaded successfully');
