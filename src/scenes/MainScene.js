@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import { withPersistentState } from '../utils/persistentState.js';
 import StatusBar from '../components/StatusBar.js';
 import BottomTabMenu from '../components/BottomTabMenu.js';
+import EnergyCountdownTimer from '../components/EnergyCountdownTimer.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -91,6 +92,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Start auto-save timer (saves stats to Supabase every 5 seconds)
     this.startAutoSave();
+
+    // Start energy countdown timer updates (updates every second)
+    this.startEnergyCountdownUpdate();
   }
 
   calculateHourlyEnergyGrants() {
@@ -685,6 +689,23 @@ export default class MainScene extends Phaser.Scene {
     this.statusBar.setScrollFactor(0);
     this.statusBar.setDepth(2000); // Always in front of everything (coins, tab menu, etc.)
 
+    // Create energy countdown timer below StatusBar (compact style)
+    const centerX = this.cameras.main.width / 2;
+    this.energyCountdownTimer = new EnergyCountdownTimer(this, centerX, 70, {
+      width: 600,
+      height: 60,
+      bgTexture: 'slider_bg',
+      fillTexture: 'slider_fill_blue'
+    });
+    this.add.existing(this.energyCountdownTimer);
+    this.energyCountdownTimer.setScale(0.35); // Scale down for compact appearance
+    this.energyCountdownTimer.setScrollFactor(0);
+    this.energyCountdownTimer.setDepth(1999); // Below StatusBar but above other UI
+
+    // Initial visibility based on energy level
+    const currentEnergy = this.batteryState.get();
+    this.energyCountdownTimer.setVisible(currentEnergy < 100);
+
     // Battery bar removed - energy now shown in status bar
     // this.createBatteryBar();
   }
@@ -1063,6 +1084,45 @@ export default class MainScene extends Phaser.Scene {
     });
   }
 
+  startEnergyCountdownUpdate() {
+    // Update countdown timer every second
+    this.countdownUpdateTimer = this.time.addEvent({
+      delay: 1000, // 1 second
+      callback: () => {
+        if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
+          this.energyCountdownTimer.updateCountdown();
+        }
+      },
+      loop: true
+    });
+
+    // Clean up timer on scene shutdown
+    this.events.once('shutdown', () => {
+      if (this.countdownUpdateTimer) {
+        this.countdownUpdateTimer.remove();
+      }
+    });
+
+    // Clean up timer on scene destroy
+    this.events.once('destroy', () => {
+      if (this.countdownUpdateTimer) {
+        this.countdownUpdateTimer.remove();
+      }
+    });
+  }
+
+  updateEnergyTimerVisibility() {
+    if (!this.energyCountdownTimer) return;
+
+    const currentEnergy = this.batteryState.get();
+    const shouldBeVisible = currentEnergy < 100;
+
+    // Only update if visibility needs to change
+    if (this.energyCountdownTimer.visible !== shouldBeVisible) {
+      this.energyCountdownTimer.setVisible(shouldBeVisible);
+    }
+  }
+
   async initTonConnect() {
     try {
       // Initialize TON Connect UI
@@ -1142,6 +1202,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Update StatusBar energy display
     this.statusBar.setResource('energy', newBattery, true);
+
+    // Update energy countdown timer visibility
+    this.updateEnergyTimerVisibility();
 
     // Update timestamp for offline regeneration tracking
     this.lastBatteryUpdateTime.set(Date.now());
@@ -1521,6 +1584,9 @@ export default class MainScene extends Phaser.Scene {
 
       // Update StatusBar energy display (even if over 100)
       this.statusBar.setResource('energy', newTotal, true);
+
+      // Update energy countdown timer visibility
+      this.updateEnergyTimerVisibility();
 
       // Update BatteryBar display (will show over 100) - only if it exists
       if (this.batteryBar && this.batteryBar.setBattery) {

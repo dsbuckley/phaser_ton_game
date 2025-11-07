@@ -19,6 +19,7 @@ export default class LoadingScene extends Phaser.Scene {
     this.load.image('slider_bg', '/assets/Components/Slider/Slider_Basic01_Bg.Png');
     this.load.image('slider_fill_magenta', '/assets/Components/Slider/Slider_Basic01_Fill_Magenta.Png');
     this.load.image('slider_fill_green', '/assets/Components/Slider/Slider_Basic01_Fill_Green.Png');
+    this.load.image('slider_fill_blue', '/assets/Components/Slider/Slider_Basic01_Fill_Blue.Png');
 
     // Handle loading errors gracefully
     this.load.on('loaderror', (file) => {
