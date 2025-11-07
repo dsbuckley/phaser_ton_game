@@ -25,8 +25,10 @@ CREATE TABLE IF NOT EXISTS user_stats (
   gems INTEGER DEFAULT 0 CHECK (gems >= 0),
 
   -- Energy/stamina system
-  energy INTEGER DEFAULT 100 CHECK (energy >= 0 AND energy <= 100),
+  -- Note: Energy can exceed 100 through collected items, but auto-refill caps at 100
+  energy INTEGER DEFAULT 100 CHECK (energy >= 0),
   last_energy_update TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  last_energy_grant_hour TIMESTAMP WITH TIME ZONE DEFAULT date_trunc('hour', NOW()),
 
   -- Progression
   user_level INTEGER DEFAULT 1 CHECK (user_level >= 1),
@@ -113,6 +115,7 @@ SELECT
   us.gems,
   us.energy,
   us.last_energy_update,
+  us.last_energy_grant_hour,
   us.user_level,
   us.high_score,
   us.total_chests_opened,
@@ -169,6 +172,24 @@ DO UPDATE SET
 
 -- Query the combined view
 SELECT * FROM user_profiles WHERE telegram_id = 123456789;
+
+-- ============================================
+-- MIGRATION: Update existing table for hourly energy system
+-- ============================================
+-- Run this if you already have an existing user_stats table
+
+-- Remove the energy upper bound constraint (allow collected items to exceed 100)
+ALTER TABLE user_stats DROP CONSTRAINT IF EXISTS user_stats_energy_check;
+ALTER TABLE user_stats ADD CONSTRAINT user_stats_energy_check CHECK (energy >= 0);
+
+-- Add new timestamp field for hourly grants
+ALTER TABLE user_stats
+ADD COLUMN IF NOT EXISTS last_energy_grant_hour TIMESTAMP WITH TIME ZONE DEFAULT date_trunc('hour', NOW());
+
+-- Initialize existing users to current hour
+UPDATE user_stats
+SET last_energy_grant_hour = date_trunc('hour', NOW())
+WHERE last_energy_grant_hour IS NULL;
 
 -- ============================================
 -- PRODUCTION SECURITY NOTES

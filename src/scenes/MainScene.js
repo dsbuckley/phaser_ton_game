@@ -33,7 +33,12 @@ export default class MainScene extends Phaser.Scene {
     // Initialize persistent battery state (starts at 100)
     this.batteryState = withPersistentState(this, 'batteryEnergy', 100);
 
-    // Initialize timestamp tracking for offline regeneration
+    // Initialize timestamp tracking for hourly energy grants (rounded to current hour)
+    const currentHourTimestamp = new Date();
+    currentHourTimestamp.setMinutes(0, 0, 0);
+    this.lastEnergyGrantHour = withPersistentState(this, 'lastEnergyGrantHour', currentHourTimestamp.getTime());
+
+    // Keep lastBatteryUpdateTime for tracking energy consumption
     this.lastBatteryUpdateTime = withPersistentState(this, 'lastBatteryUpdateTime', Date.now());
 
     // Initialize persistent state for tickets and gems (now tracked)
@@ -52,8 +57,8 @@ export default class MainScene extends Phaser.Scene {
       shop: { show: false, text: null }
     });
 
-    // Calculate offline energy regeneration (will show notification after UI is created)
-    this.offlineEnergyGained = this.calculateOfflineRegeneration();
+    // Calculate hourly energy grants (will show notification after UI is created)
+    this.offlineEnergyGained = this.calculateHourlyEnergyGrants();
 
     // Initialize Supabase client
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
@@ -88,37 +93,47 @@ export default class MainScene extends Phaser.Scene {
     this.startAutoSave();
   }
 
-  calculateOfflineRegeneration() {
+  calculateHourlyEnergyGrants() {
+    const currentEnergy = this.batteryState.get();
+
+    // Only grant energy if below 100 (auto-refill cap)
+    if (currentEnergy >= 100) {
+      console.log('Energy already at or above 100, no auto-refill needed');
+      return 0;
+    }
+
+    // Get last grant hour from localStorage (fallback to current time if not set)
+    const lastGrantHour = this.lastEnergyGrantHour.get() || Date.now();
     const currentTime = Date.now();
-    const lastUpdateTime = this.lastBatteryUpdateTime.get();
-    const currentBattery = this.batteryState.get();
 
-    // Calculate elapsed time in seconds
-    const elapsedSeconds = (currentTime - lastUpdateTime) / 1000;
+    // Calculate how many full hours have passed
+    const lastHourDate = new Date(lastGrantHour);
+    const currentHourDate = new Date(currentTime);
 
-    // Only apply if at least 1 second has passed and battery is below max
-    if (elapsedSeconds >= 1 && currentBattery < 100) {
-      // Regeneration rate: 3.3 energy per second (matching active regeneration)
-      const energyGained = Math.floor(elapsedSeconds * 3.3);
+    // Truncate to hour boundaries (e.g., 10:45 becomes 10:00)
+    lastHourDate.setMinutes(0, 0, 0);
+    currentHourDate.setMinutes(0, 0, 0);
 
-      if (energyGained > 0) {
-        // Calculate new battery value (clamped to max 100)
-        const newBattery = Math.min(currentBattery + energyGained, 100);
-        const actualGained = newBattery - currentBattery;
+    // Calculate hours difference
+    const hoursDiff = Math.floor((currentHourDate - lastHourDate) / (1000 * 60 * 60));
 
-        // Update battery state
-        this.batteryState.set(newBattery);
-        this.lastBatteryUpdateTime.set(currentTime);
+    if (hoursDiff > 0) {
+      // Grant 5 energy per hour
+      const energyToGrant = hoursDiff * 5;
 
-        // Log offline regeneration for debugging
-        const minutesElapsed = Math.floor(elapsedSeconds / 60);
-        console.log(`Offline regeneration: +${actualGained} energy (${minutesElapsed} minutes offline)`);
+      // Cap at 100 maximum
+      const newEnergy = Math.min(currentEnergy + energyToGrant, 100);
+      const actualGranted = newEnergy - currentEnergy;
 
-        return actualGained;
-      }
-    } else {
-      // Still update timestamp even if no regeneration occurred
-      this.lastBatteryUpdateTime.set(currentTime);
+      // Update energy state
+      this.batteryState.set(newEnergy);
+
+      // Update last grant hour to current hour
+      this.lastEnergyGrantHour.set(currentHourDate.getTime());
+
+      console.log(`Hourly energy grants: +${actualGranted} energy (${hoursDiff} hours passed)`);
+
+      return actualGranted;
     }
 
     return 0;
@@ -204,32 +219,9 @@ export default class MainScene extends Phaser.Scene {
   }
 
   startBatteryRegeneration() {
-    // Create a repeating timer that runs every second
-    this.batteryRegenTimer = this.time.addEvent({
-      delay: 300, // 0.3 second
-      callback: () => {
-        const currentTime = this.time.now;
-        const timeSinceLastClick = currentTime - this.lastClickTime;
-
-        // Only regenerate if user hasn't clicked for at least 1 second
-        if (timeSinceLastClick >= 1000) {
-          const currentBattery = this.batteryState.get();
-
-          // Only increase if below max (100)
-          if (currentBattery < 100) {
-            const newBattery = currentBattery + 1;
-            this.batteryState.set(newBattery);
-
-            // Update StatusBar energy display
-            this.statusBar.setResource('energy', newBattery, true);
-
-            // Update timestamp for offline regeneration tracking
-            this.lastBatteryUpdateTime.set(Date.now());
-          }
-        }
-      },
-      loop: true
-    });
+    // DISABLED: Energy now regenerates hourly (5 energy per hour on the hour)
+    // No active regeneration timer needed - calculations happen on game load
+    console.log('Active energy regeneration disabled - using hourly system');
   }
 
   createChestAnimation() {
@@ -941,20 +933,32 @@ export default class MainScene extends Phaser.Scene {
         this.userLevelState.set(stats.user_level || 1);
         this.totalChestsOpenedState.set(stats.total_chests_opened || 0);
 
-        // Calculate server-side offline regeneration using last_energy_update
-        if (stats.last_energy_update && stats.energy < 100) {
-          const lastUpdate = new Date(stats.last_energy_update).getTime();
-          const currentTime = Date.now();
-          const elapsedSeconds = (currentTime - lastUpdate) / 1000;
+        // Calculate server-side hourly energy grants using last_energy_grant_hour
+        if (stats.last_energy_grant_hour && stats.energy < 100) {
+          const lastGrantHour = new Date(stats.last_energy_grant_hour);
+          const currentTime = new Date();
 
-          // Regeneration rate: 3.3 energy per second
-          const energyGained = Math.floor(elapsedSeconds * 3.3);
-          const newEnergy = Math.min(stats.energy + energyGained, 100);
+          // Truncate to hour boundaries
+          lastGrantHour.setMinutes(0, 0, 0);
+          currentTime.setMinutes(0, 0, 0);
 
-          if (energyGained > 0) {
-            console.log(`Server-calculated offline regeneration: +${newEnergy - stats.energy} energy`);
-            this.batteryState.set(newEnergy);
-            this.offlineEnergyGained = newEnergy - stats.energy;
+          // Calculate hours difference
+          const hoursDiff = Math.floor((currentTime - lastGrantHour) / (1000 * 60 * 60));
+
+          if (hoursDiff > 0) {
+            // Grant 5 energy per hour, cap at 100
+            const energyToGrant = hoursDiff * 5;
+            const newEnergy = Math.min(stats.energy + energyToGrant, 100);
+            const actualGranted = newEnergy - stats.energy;
+
+            if (actualGranted > 0) {
+              console.log(`Server-calculated hourly grants: +${actualGranted} energy (${hoursDiff} hours passed)`);
+              this.batteryState.set(newEnergy);
+              this.offlineEnergyGained = actualGranted;
+
+              // Update last grant hour in localStorage
+              this.lastEnergyGrantHour.set(currentTime.getTime());
+            }
           }
         }
 
@@ -1001,6 +1005,10 @@ export default class MainScene extends Phaser.Scene {
     }
 
     try {
+      // Convert lastEnergyGrantHour timestamp to ISO string for database
+      const lastGrantHourTimestamp = this.lastEnergyGrantHour.get();
+      const lastGrantHourISO = new Date(lastGrantHourTimestamp).toISOString();
+
       const statsData = {
         telegram_id: this.telegramUser.id,
         coins: this.coinsState.get(),
@@ -1009,7 +1017,8 @@ export default class MainScene extends Phaser.Scene {
         energy: this.batteryState.get(),
         user_level: this.userLevelState.get(),
         total_chests_opened: this.totalChestsOpenedState.get(),
-        last_energy_update: new Date().toISOString()
+        last_energy_update: new Date().toISOString(),
+        last_energy_grant_hour: lastGrantHourISO
       };
 
       const { error } = await this.supabase
@@ -1437,15 +1446,12 @@ export default class MainScene extends Phaser.Scene {
   }
 
   createEnergyReward() {
-    console.log('Creating energy reward!');
-
     // Get chest position
     const chestX = this.player.x;
     const chestY = this.player.y;
 
     // Create single energy sprite with physics
     const energy = this.physics.add.sprite(chestX, chestY, 'statusbar_energy');
-    console.log('Energy sprite created at:', chestX, chestY);
 
     // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
     energy.setDepth(1100);
@@ -1490,31 +1496,22 @@ export default class MainScene extends Phaser.Scene {
 
     // Click handler - collect energy
     energy.on('pointerdown', () => {
-      console.log('Energy clicked!');
-
       // Unlock audio if needed
       if (!this.audioUnlocked) {
         this.sound.context.resume().then(() => {
           this.audioUnlocked = true;
-          console.log('Audio unlocked');
         }).catch(err => {
           console.warn('Failed to unlock audio:', err);
         });
       }
 
       // Play energy collection sound
-      try {
-        this.sound.play('energy_collect_sound');
-        console.log('Playing energy sound');
-      } catch (err) {
-        console.error('Failed to play energy sound:', err);
-      }
+      this.sound.play('energy_collect_sound');
 
       // Update energy state (+1, no cap)
       const currentEnergy = this.batteryState.get();
       const newTotal = currentEnergy + 1;
       this.batteryState.set(newTotal);
-      console.log(`Energy updated: ${currentEnergy} -> ${newTotal}`);
 
       // Update StatusBar energy display (even if over 100)
       this.statusBar.setResource('energy', newTotal, true);
@@ -1547,7 +1544,6 @@ export default class MainScene extends Phaser.Scene {
 
       // Destroy energy immediately on click
       energy.destroy();
-      console.log('Energy destroyed');
     });
 
     // Fade out and destroy if not clicked - 1500ms delay matches coin confetti
