@@ -1782,6 +1782,12 @@ export default class MainScene extends Phaser.Scene {
         // Spawn coin burst (skip total update - we'll update incrementally)
         this.createCoinConfetti(coinsPerBurst, true, true);
 
+        // Spawn 1-5 random energy sprites per burst
+        const energyCount = Phaser.Math.Between(1, 5);
+        for (let i = 0; i < energyCount; i++) {
+          this.createEnergyReward();
+        }
+
         // Update coins incrementally with each burst
         const currentCoins = this.coinsState.get();
         const newTotal = currentCoins + coinsPerBurst;

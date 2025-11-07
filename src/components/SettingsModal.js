@@ -147,13 +147,8 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
    * Creates a toggle row with icon, label, and switch
    */
   createToggleRow(x, y, labelText, iconKey, initialState, onToggle) {
-    // Icon - smaller and positioned on left
-    const icon = this.scene.add.image(x - 180, y, iconKey);
-    icon.setScale(0.45);
-    this.add(icon);
-
-    // Label text - much smaller
-    const label = this.scene.add.text(x - 130, y, labelText, {
+    // Label text - moved to the right
+    const label = this.scene.add.text(x - 160, y, labelText, {
       fontFamily: 'LINESeed',
       fontSize: '16px',
       fill: '#3a4a5a',
@@ -163,7 +158,12 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     label.setOrigin(0, 0.5);
     this.add(label);
 
-    // Toggle container position (moved closer to center)
+    // Icon - positioned closer to toggle
+    const icon = this.scene.add.image(x + 40, y, iconKey);
+    icon.setScale(0.45);
+    this.add(icon);
+
+    // Toggle container position
     const toggleX = x + 95;
 
     // Background using NineSlice to create proper pill shape
