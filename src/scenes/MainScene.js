@@ -5,6 +5,7 @@ import { withPersistentState } from '../utils/persistentState.js';
 import StatusBar from '../components/StatusBar.js';
 import BottomTabMenu from '../components/BottomTabMenu.js';
 import EnergyCountdownTimer from '../components/EnergyCountdownTimer.js';
+import SettingsModal from '../components/SettingsModal.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -645,6 +646,25 @@ export default class MainScene extends Phaser.Scene {
   }
 
   createStatusBar() {
+    // Create settings modal first (must exist before status bar references it)
+    this.settingsModal = new SettingsModal(this, {
+      onSoundToggle: (enabled) => {
+        console.log('Sound toggle:', enabled);
+        // Enable/disable all game sounds
+        if (enabled) {
+          this.sound.setMute(false);
+        } else {
+          this.sound.setMute(true);
+        }
+      },
+      onHapticToggle: (enabled) => {
+        console.log('Haptic toggle:', enabled);
+        // Haptic feedback is automatically handled in the modal component
+        // based on the hapticEnabled state
+      }
+    });
+    this.add.existing(this.settingsModal);
+
     // Get Telegram user photo URL if available
     let avatarUrl = null;
     if (window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) {
@@ -668,8 +688,7 @@ export default class MainScene extends Phaser.Scene {
         { key: 'gems', icon: 'statusbar_gem', value: this.gemsState.get(), width: 65 }
       ],
       onSettingsClick: () => {
-        console.log('Settings button clicked');
-        // TODO: Open settings menu/popup
+        this.settingsModal.show();
       },
       statusBarY: 30 // Pass Y position for HTML avatar positioning
     });

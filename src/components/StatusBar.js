@@ -269,33 +269,44 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const buttonX = this.scene.cameras.main.width - 30; // Closer to edge
     const buttonY = 0;
 
-    // Settings icon button - smaller
+    // Settings icon button - using scale instead of setDisplaySize for proper interaction
     if (this.scene.textures.exists('settings_icon')) {
       this.settingsButton = this.scene.add.image(buttonX, buttonY, 'settings_icon');
-      this.settingsButton.setDisplaySize(28, 28); // Reduced from 32px
+
+      // Calculate scale to achieve 28px size
+      const targetSize = 28;
+      const textureWidth = this.scene.textures.get('settings_icon').getSourceImage().width;
+      const baseScale = targetSize / textureWidth;
+      this.settingsButton.setScale(baseScale);
+
+      // Store the base scale for reset
+      this.settingsButtonBaseScale = baseScale;
     } else {
       // Fallback: gear icon using graphics
       this.settingsButton = this.scene.add.circle(buttonX, buttonY, 16, 0x95a5a6);
+      this.settingsButtonBaseScale = 1;
     }
 
     this.settingsButton.setInteractive({ useHandCursor: true });
 
-    // Hover/tap effects
-    this.settingsButton.on('pointerover', () => {
-      this.settingsButton.setTint(0xdddddd);
-    });
-
-    this.settingsButton.on('pointerout', () => {
-      this.settingsButton.clearTint();
-    });
-
+    // Press and release with proper scaling from base scale
     this.settingsButton.on('pointerdown', () => {
-      this.settingsButton.setScale(0.9);
-      this.config.onSettingsClick();
+      this.settingsButton.setScale(this.settingsButtonBaseScale * 0.85);
+      this.settingsButton.setTint(0xcccccc);
     });
 
     this.settingsButton.on('pointerup', () => {
-      this.settingsButton.setScale(1);
+      // Reset to base scale
+      this.settingsButton.setScale(this.settingsButtonBaseScale);
+      this.settingsButton.clearTint();
+      // Then trigger modal
+      this.config.onSettingsClick();
+    });
+
+    // Reset if dragged away
+    this.settingsButton.on('pointerout', () => {
+      this.settingsButton.setScale(this.settingsButtonBaseScale);
+      this.settingsButton.clearTint();
     });
 
     this.add(this.settingsButton);

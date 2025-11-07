@@ -107,6 +107,17 @@ export default class LoadingScene extends Phaser.Scene {
     // Mega jackpot light background
     loader.image('jackpot_light', '/assets/Components/Demo_Image/Image_Light.png');
 
+    // Settings modal assets
+    loader.image('settings_modal_bg', '/assets/Components/Popup/popup02_White1.png');
+    loader.image('settings_header_ribbon', '/assets/Components/Label/Label_Ribbon01_Blue.png');
+    loader.image('settings_close_btn', '/assets/Components/IconMisc/Icon_Colse02.Png');
+    loader.image('settings_sound_icon', '/assets/Components/IconMisc/Icon_Sound.png');
+    loader.image('settings_haptic_icon', '/assets/Components/IconMisc/Icon_Bell.png');
+    loader.image('toggle_bg_on', '/assets/Components/UI_Etc/Switch01_Demo_Bg_On.Png');
+    loader.image('toggle_bg_off', '/assets/Components/UI_Etc/Switch01_Demo_Bg_Off.Png');
+    loader.image('toggle_button_on', '/assets/Components/UI_Etc/Switch01_Demo_Button_On.Png');
+    loader.image('toggle_button_off', '/assets/Components/UI_Etc/Switch01_Demo_Button_Off.Png');
+
     // Sounds
     loader.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
     loader.audio('chest_sound_big', '/assets/sounds/treasure_chest_4.mp3');

@@ -232,35 +232,68 @@ openChest() {
 
 **Use Cases:** Energy systems, stamina bars, action cooldowns, daily limits
 
-### NineSlice Button Pattern
-Scalable buttons preserving rounded corners.
+### NineSlice Pattern (WebGL Only)
+**Critical for scalable UI elements that preserve corner/edge integrity.**
 
+**How NineSlice Works:**
+A NineSlice divides your texture into a 3×3 grid (9 regions):
+- **Corners (1, 3, 7, 9):** Never scale - preserve rounded corners and decorative elements
+- **Edges (2, 8):** Stretch horizontally only
+- **Sides (4, 6):** Stretch vertically only
+- **Center (5):** Stretches in both directions
+
+**Slice Parameters (in pixels from edges):**
 ```javascript
-// Create button with NineSlice
-const button = this.add.nineslice(
-  x, y, 'btn_green', null,
-  280, 80,           // Width x height
-  20, 20, 20, 20     // Slices (left, right, top, bottom)
-).setOrigin(0.5).setInteractive({ useHandCursor: true });
-
-// Add text overlay
-const text = this.add.text(x, y, 'Button Text', {
-  fontFamily: 'LINESeed',
-  fontSize: '20px',
-  fill: '#fff',
-  fontStyle: 'bold',
-  stroke: '#000000',
-  strokeThickness: 3,
-  resolution: 2
-}).setOrigin(0.5);
-
-// Hover effect
-button.on('pointerover', () => button.setTint(0xddffdd));
-button.on('pointerout', () => button.clearTint());
+scene.add.nineslice(
+  x, y, texture, frame,
+  width, height,
+  leftWidth,    // Distance from left edge to vertical divider
+  rightWidth,   // Distance from right edge to vertical divider
+  topHeight,    // Distance from top edge to horizontal divider
+  bottomHeight  // Distance from bottom edge to horizontal divider
+);
 ```
 
-**Why NineSlice:** Prevents corner distortion when scaling
-**Use for:** All game buttons, menus, dialogs
+**Critical Rules:**
+1. Width must be ≥ (leftWidth + rightWidth)
+2. Height must be ≥ (topHeight + bottomHeight)
+3. Slice values should match where corners/edges end in the original texture
+4. For pill shapes: set left/right to half the height to preserve rounded ends
+5. Use `setScale()` on the NineSlice object if you need sizes smaller than minimum dimensions
+
+**Example: Button with NineSlice**
+```javascript
+const button = this.add.nineslice(
+  x, y, 'btn_green', null,
+  280, 80,           // Target width × height
+  20, 20, 20, 20     // Slices: left, right, top, bottom (20px corners)
+).setOrigin(0.5).setInteractive({ useHandCursor: true });
+```
+
+**Example: Pill-shaped toggle (150×94px original)**
+```javascript
+// For a horizontal pill, left/right should be ~47px (half the height)
+// to preserve the rounded caps on both ends
+const toggle = this.add.nineslice(
+  x, y, 'toggle_bg', null,
+  200, 94,           // Stretch width to 200px, keep height
+  47, 47, 10, 10     // Large left/right preserves rounded ends
+).setScale(0.5);     // Scale entire object down for final size
+```
+
+**3-Slice Alternative (horizontal only):**
+```javascript
+// Omit topHeight and bottomHeight for horizontal-only stretching
+const bar = this.add.nineslice(x, y, 'health_bar', null, width, height, leftWidth, rightWidth);
+```
+
+**Common Mistakes:**
+- ❌ Setting slice values too small → corners get stretched and distorted
+- ❌ Setting slice values too large → no middle section to stretch
+- ❌ Trying to make NineSlice smaller than minimum dimensions → use setScale() instead
+- ❌ Not matching slice values to actual corner size in texture → warped appearance
+
+**Use Cases:** Buttons, dialog boxes, panels, health bars, bordered frames, pill-shaped toggles
 
 ## Fonts & Text Rendering
 
