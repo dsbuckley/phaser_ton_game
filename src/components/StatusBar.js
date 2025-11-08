@@ -418,7 +418,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
   /**
    * Animate the HTML avatar overlay position
-   * @param {number} targetY - Target Y position in Phaser world coordinates
+   * @param {number} targetY - Target Y position in Phaser world coordinates (relative to container)
    * @param {number} duration - Animation duration in milliseconds
    * @param {string} ease - Easing function (e.g., 'Power2.easeOut')
    */
@@ -429,12 +429,14 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     const canvasRect = canvas.getBoundingClientRect();
 
     const avatarX = 35;
+    const avatarY = 0;
     const worldX = avatarX;
     const screenX = canvasRect.left + worldX - 24;
 
     // Calculate start and end positions
+    // targetY is relative to container, so add statusBarY to get world position
     const startY = parseFloat(this.htmlAvatarContainer.style.top) || 0;
-    const endY = canvasRect.top + targetY - 24;
+    const endY = canvasRect.top + (this.statusBarY + targetY + avatarY) - 24;
 
     // Animate using requestAnimationFrame for smooth CSS animation
     const startTime = Date.now();
