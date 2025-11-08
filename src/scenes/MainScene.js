@@ -1403,20 +1403,12 @@ export default class MainScene extends Phaser.Scene {
         }
       });
 
-      // Fade out and destroy - big payouts stay longer
-      const fadeDelay = isBigPayout ? 2000 : 1500; // Big payout: 2.5s total, Normal: 2s total
-      this.time.delayedCall(fadeDelay, () => {
-        this.tweens.add({
-          targets: coin,
-          alpha: 0,
-          duration: 500,
-          ease: 'Power2',
-          onComplete: () => {
-            // Remove from tracking set before destroying
-            this.activeConfettiSprites.delete(coin);
-            coin.destroy();
-          }
-        });
+      // Destroy after falling off screen - big payouts stay longer
+      const destroyDelay = isBigPayout ? 3000 : 2500; // Big payout: 3s total, Normal: 2.5s total
+      this.time.delayedCall(destroyDelay, () => {
+        // Remove from tracking set before destroying
+        this.activeConfettiSprites.delete(coin);
+        coin.destroy();
       });
     }
 
