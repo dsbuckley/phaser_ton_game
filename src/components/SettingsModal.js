@@ -219,9 +219,9 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       // Trigger callback
       onToggle(isEnabled);
 
-      // Haptic feedback (if enabled)
+      // Haptic feedback for toggle selection change (if enabled)
       if (this.hapticEnabledState.get() && window.Telegram?.WebApp?.HapticFeedback) {
-        window.Telegram.WebApp.HapticFeedback.impactOccurred('light');
+        window.Telegram.WebApp.HapticFeedback.selectionChanged();
       }
     });
 
