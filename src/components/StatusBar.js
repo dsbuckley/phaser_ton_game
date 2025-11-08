@@ -308,6 +308,12 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       // Reset to base scale
       this.settingsButton.setScale(this.settingsButtonBaseScale);
       this.settingsButton.clearTint();
+
+      // Play button sound (same as BottomTabMenu)
+      if (this.scene.sound) {
+        this.scene.sound.play('button_sound');
+      }
+
       // Then trigger modal
       this.config.onSettingsClick();
     });
