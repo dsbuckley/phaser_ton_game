@@ -1245,7 +1245,7 @@ export default class MainScene extends Phaser.Scene {
     const rand = Math.random();
     let coinReward, isMegaJackpot = false, isBigPayout = false;
 
-    if (rand < 0.01) {
+    if (rand < 0.015) {
       // 1% mega jackpot
       isMegaJackpot = true;
       coinReward = Phaser.Utils.Array.GetRandom([1500, 2000, 2500, 3000, 5000]);
@@ -1262,7 +1262,7 @@ export default class MainScene extends Phaser.Scene {
     const isEmeraldReward = !isMegaJackpot && (Math.random() < 0.1);
 
     // Determine if energy reward should spawn (15% chance for non-mega jackpots)
-    const isEnergyReward = !isMegaJackpot && (Math.random() < 0.15);
+    const isEnergyReward = !isMegaJackpot && (Math.random() < 0.20);
 
     // Handle mega jackpot differently
     if (isMegaJackpot) {
