@@ -1443,9 +1443,9 @@ export default class MainScene extends Phaser.Scene {
     // Larger scale for visibility (emerald is special/rare)
     const scale = 0.9;
 
-    // Set upward physics velocity (jackpot level - higher than normal coins)
+    // Set upward physics velocity with random height variation
     const velocityX = Phaser.Math.Between(-200, 200); // Moderate horizontal drift
-    const velocityY = Phaser.Math.Between(-700, -900); // Launch high (jackpot level)
+    const velocityY = Phaser.Math.Between(-400, -1000); // Random height: low to very high
     emerald.setVelocity(velocityX, velocityY);
 
     // Apply gravity for realistic arc
@@ -1466,11 +1466,22 @@ export default class MainScene extends Phaser.Scene {
       duration: 150,
       ease: 'Back.out',
       onComplete: () => {
-        // Zoom towards camera effect - scale up 2x to simulate approaching
+        // Random zoom effect - 50% chance towards camera (bigger), 50% away (smaller)
+        const zoomTowards = Math.random() < 0.5;
+        const zoomMultiplier = zoomTowards
+          ? Phaser.Math.FloatBetween(1.5, 3.0)  // Zoom in: 1.5x to 3.0x
+          : Phaser.Math.FloatBetween(0.3, 0.6); // Zoom out: 0.3x to 0.6x
+
+        // If zooming away (getting smaller), move behind chest (depth -10)
+        // If zooming towards (getting bigger), stay in front (depth 1100)
+        if (!zoomTowards) {
+          emerald.setDepth(-10); // Behind chest (chest is at default depth 0)
+        }
+
         this.tweens.add({
           targets: emerald,
-          scaleX: scale * 2.0,
-          scaleY: scale * 2.0,
+          scaleX: scale * zoomMultiplier,
+          scaleY: scale * zoomMultiplier,
           duration: 1000,
           ease: 'Power2.easeIn',
           delay: 200
@@ -1525,17 +1536,52 @@ export default class MainScene extends Phaser.Scene {
       emerald.destroy();
     });
 
-    // Fade out and destroy if not clicked - 1500ms delay matches coin confetti
-    this.time.delayedCall(1500, () => {
+    // Pulsing warning fade before disappearing
+    this.time.delayedCall(2500, () => {
       // Only fade if emerald still exists (not clicked)
       if (emerald && emerald.active) {
+        // Disable interactivity during fade warning
+        emerald.disableInteractive();
+
+        // Create pulsing fade effect - faster and faster
+        // First pulse: 400ms
         this.tweens.add({
           targets: emerald,
-          alpha: 0,
-          duration: 500,
-          ease: 'Power2',
+          alpha: 0.3,
+          duration: 400,
+          ease: 'Sine.easeInOut',
+          yoyo: true,
           onComplete: () => {
-            emerald.destroy();
+            // Second pulse: 300ms (faster)
+            this.tweens.add({
+              targets: emerald,
+              alpha: 0.3,
+              duration: 300,
+              ease: 'Sine.easeInOut',
+              yoyo: true,
+              onComplete: () => {
+                // Third pulse: 200ms (even faster)
+                this.tweens.add({
+                  targets: emerald,
+                  alpha: 0.3,
+                  duration: 200,
+                  ease: 'Sine.easeInOut',
+                  yoyo: true,
+                  onComplete: () => {
+                    // Final fast fade out
+                    this.tweens.add({
+                      targets: emerald,
+                      alpha: 0,
+                      duration: 200,
+                      ease: 'Power2',
+                      onComplete: () => {
+                        emerald.destroy();
+                      }
+                    });
+                  }
+                });
+              }
+            });
           }
         });
       }
@@ -1556,9 +1602,9 @@ export default class MainScene extends Phaser.Scene {
     // Larger scale for visibility (same size as emerald)
     const scale = 0.9;
 
-    // Set upward physics velocity (jackpot level - higher than normal coins)
+    // Set upward physics velocity with random height variation
     const velocityX = Phaser.Math.Between(-200, 200); // Moderate horizontal drift
-    const velocityY = Phaser.Math.Between(-700, -900); // Launch high (jackpot level)
+    const velocityY = Phaser.Math.Between(-400, -1000); // Random height: low to very high
     energy.setVelocity(velocityX, velocityY);
 
     // Apply gravity for realistic arc
@@ -1579,11 +1625,22 @@ export default class MainScene extends Phaser.Scene {
       duration: 150,
       ease: 'Back.out',
       onComplete: () => {
-        // Zoom towards camera effect - scale up 2x to simulate approaching
+        // Random zoom effect - 50% chance towards camera (bigger), 50% away (smaller)
+        const zoomTowards = Math.random() < 0.5;
+        const zoomMultiplier = zoomTowards
+          ? Phaser.Math.FloatBetween(1.5, 3.0)  // Zoom in: 1.5x to 3.0x
+          : Phaser.Math.FloatBetween(0.3, 0.6); // Zoom out: 0.3x to 0.6x
+
+        // If zooming away (getting smaller), move behind chest (depth -10)
+        // If zooming towards (getting bigger), stay in front (depth 1100)
+        if (!zoomTowards) {
+          energy.setDepth(-10); // Behind chest (chest is at default depth 0)
+        }
+
         this.tweens.add({
           targets: energy,
-          scaleX: scale * 2.0,
-          scaleY: scale * 2.0,
+          scaleX: scale * zoomMultiplier,
+          scaleY: scale * zoomMultiplier,
           duration: 1000,
           ease: 'Power2.easeIn',
           delay: 200
@@ -1646,17 +1703,52 @@ export default class MainScene extends Phaser.Scene {
       energy.destroy();
     });
 
-    // Fade out and destroy if not clicked - 1500ms delay matches coin confetti
-    this.time.delayedCall(1500, () => {
+    // Pulsing warning fade before disappearing
+    this.time.delayedCall(2500, () => {
       // Only fade if energy still exists (not clicked)
       if (energy && energy.active) {
+        // Disable interactivity during fade warning
+        energy.disableInteractive();
+
+        // Create pulsing fade effect - faster and faster
+        // First pulse: 400ms
         this.tweens.add({
           targets: energy,
-          alpha: 0,
-          duration: 500,
-          ease: 'Power2',
+          alpha: 0.3,
+          duration: 400,
+          ease: 'Sine.easeInOut',
+          yoyo: true,
           onComplete: () => {
-            energy.destroy();
+            // Second pulse: 300ms (faster)
+            this.tweens.add({
+              targets: energy,
+              alpha: 0.3,
+              duration: 300,
+              ease: 'Sine.easeInOut',
+              yoyo: true,
+              onComplete: () => {
+                // Third pulse: 200ms (even faster)
+                this.tweens.add({
+                  targets: energy,
+                  alpha: 0.3,
+                  duration: 200,
+                  ease: 'Sine.easeInOut',
+                  yoyo: true,
+                  onComplete: () => {
+                    // Final fast fade out
+                    this.tweens.add({
+                      targets: energy,
+                      alpha: 0,
+                      duration: 200,
+                      ease: 'Power2',
+                      onComplete: () => {
+                        energy.destroy();
+                      }
+                    });
+                  }
+                });
+              }
+            });
           }
         });
       }
