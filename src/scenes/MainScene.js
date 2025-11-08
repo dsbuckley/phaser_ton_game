@@ -1515,6 +1515,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Click handler - collect emerald
     emerald.on('pointerdown', () => {
+      // Prevent multiple clicks
+      emerald.disableInteractive();
+
       // Unlock audio if needed
       if (!this.audioUnlocked) {
         this.sound.context.resume().then(() => {
@@ -1561,9 +1564,21 @@ export default class MainScene extends Phaser.Scene {
         onComplete: () => floatingText.destroy()
       });
 
-      // Remove from tracking set and destroy emerald immediately on click
-      this.activeConfettiSprites.delete(emerald);
-      emerald.destroy();
+      // Bubble pop animation - scale up and fade out
+      this.tweens.add({
+        targets: emerald,
+        scaleX: 1.5,
+        scaleY: 1.5,
+        alpha: 0,
+        angle: emerald.angle + 180, // Add rotation for dynamics
+        duration: 250,
+        ease: 'Back.easeIn',
+        onComplete: () => {
+          // Remove from tracking set and destroy after animation
+          this.activeConfettiSprites.delete(emerald);
+          emerald.destroy();
+        }
+      });
     });
 
     // Pulsing warning fade before disappearing
@@ -1685,6 +1700,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Click handler - collect energy
     energy.on('pointerdown', () => {
+      // Prevent multiple clicks
+      energy.disableInteractive();
+
       // Unlock audio if needed
       if (!this.audioUnlocked) {
         this.sound.context.resume().then(() => {
@@ -1739,9 +1757,21 @@ export default class MainScene extends Phaser.Scene {
         onComplete: () => floatingText.destroy()
       });
 
-      // Remove from tracking set and destroy energy immediately on click
-      this.activeConfettiSprites.delete(energy);
-      energy.destroy();
+      // Bubble pop animation - scale up and fade out
+      this.tweens.add({
+        targets: energy,
+        scaleX: 1.5,
+        scaleY: 1.5,
+        alpha: 0,
+        angle: energy.angle + 180, // Add rotation for dynamics
+        duration: 250,
+        ease: 'Back.easeIn',
+        onComplete: () => {
+          // Remove from tracking set and destroy after animation
+          this.activeConfettiSprites.delete(energy);
+          energy.destroy();
+        }
+      });
     });
 
     // Pulsing warning fade before disappearing
