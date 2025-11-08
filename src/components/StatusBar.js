@@ -235,7 +235,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     // Resource icon - compact size for tight layout
     const iconSize = 30; // Icon size
-    const iconX = x + 5; // Left padding from pill edge (shifted right 5px more)
+    const iconX = x + 0; // Left padding from pill edge (shifted right 5px more)
     const iconY = y;
 
     let icon;
@@ -249,7 +249,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     this.add(icon);
 
     // Resource value text - positioned close to icon
-    const textX = x + 20; // Position after icon with small gap (shifted right 5px more)
+    const textX = x + 15; // Position after icon with small gap (shifted right 5px more)
     const textY = y;
 
     const valueText = this.scene.add.text(textX, textY, this.formatNumber(value), {
