@@ -456,6 +456,7 @@ export default class MainScene extends Phaser.Scene {
     const sparkle = this.add.image(x, y, 'sparkle');
     sparkle.setScale(randomScale);
     sparkle.setAlpha(0); // Start invisible
+    sparkle.setDepth(5); // Behind sun (10) but in front of clouds
 
     // Add to active sparkles array
     this.activeSparkles.push(sparkle);
@@ -530,6 +531,7 @@ export default class MainScene extends Phaser.Scene {
     if (this.textures.exists('chest_0001')) {
       this.player = this.add.sprite(centerX + 10, centerY + 110, 'chest_0001');
       this.player.setScale(0.85);
+      this.player.setDepth(20); // In front of sun (10) and sparkles (5)
 
       // Make chest interactive
       this.player.setInteractive({ useHandCursor: true });
@@ -1211,6 +1213,9 @@ export default class MainScene extends Phaser.Scene {
       this.firstClick = true;
     }
 
+    // Slide UI out of screen BEFORE audio unlock to prevent animation delays
+    this.slideUIOut();
+
     // Resume AudioContext on first interaction (required by browsers)
     if (!this.audioUnlocked) {
       this.sound.context.resume().then(() => {
@@ -1225,9 +1230,6 @@ export default class MainScene extends Phaser.Scene {
     if (window.Telegram?.WebApp?.HapticFeedback) {
       window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
     }
-
-    // Slide UI out of screen
-    this.slideUIOut();
 
     // Decrease battery by 1
     const newBattery = currentBattery - 1;
@@ -1344,8 +1346,8 @@ export default class MainScene extends Phaser.Scene {
       // Track this sprite for UI slide-in monitoring
       this.activeConfettiSprites.add(coin);
 
-      // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
-      coin.setDepth(1100);
+      // Set depth in front of sun (10), sparkles (5), and chest (20)
+      coin.setDepth(100);
 
       // Random scale for variety
       const scale = Phaser.Math.FloatBetween(0.3, 0.5);
@@ -1384,10 +1386,10 @@ export default class MainScene extends Phaser.Scene {
             ? Phaser.Math.FloatBetween(1.5, 3.0)  // Zoom in: 1.5x to 3.0x
             : Phaser.Math.FloatBetween(0.3, 0.6); // Zoom out: 0.3x to 0.6x
 
-          // If zooming away (getting smaller), move behind chest (depth -10)
-          // If zooming towards (getting bigger), stay in front (depth 1100)
+          // If zooming away (getting smaller), move behind chest (depth 15)
+          // If zooming towards (getting bigger), stay in front (depth 100)
           if (!zoomTowards) {
-            coin.setDepth(-10); // Behind chest (chest is at default depth 0)
+            coin.setDepth(15); // Behind chest (20) but in front of sun (10) and sparkles (5)
           }
 
           this.tweens.add({
