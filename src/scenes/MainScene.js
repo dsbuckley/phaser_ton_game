@@ -1271,8 +1271,8 @@ export default class MainScene extends Phaser.Scene {
     // Determine if emerald reward should spawn (10% chance for non-mega jackpots)
     const isEmeraldReward = !isMegaJackpot && (Math.random() < 0.1);
 
-    // Determine if energy reward should spawn (15% chance for non-mega jackpots)
-    const isEnergyReward = !isMegaJackpot && (Math.random() < 0.20);
+    // Determine if energy reward should spawn (25% chance for non-mega jackpots)
+    const isEnergyReward = !isMegaJackpot && (Math.random() < 0.25);
 
     // Handle mega jackpot differently
     if (isMegaJackpot) {
