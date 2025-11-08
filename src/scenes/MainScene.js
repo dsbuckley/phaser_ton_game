@@ -1458,8 +1458,8 @@ export default class MainScene extends Phaser.Scene {
     // Track this sprite for UI slide-in monitoring
     this.activeConfettiSprites.add(emerald);
 
-    // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
-    emerald.setDepth(1100);
+    // Set depth in front of sun (10), sparkles (5), and chest (20)
+    emerald.setDepth(100);
 
     // Larger scale for visibility (emerald is special/rare)
     const scale = 0.9;
@@ -1493,10 +1493,10 @@ export default class MainScene extends Phaser.Scene {
           ? Phaser.Math.FloatBetween(1.5, 3.0)  // Zoom in: 1.5x to 3.0x
           : Phaser.Math.FloatBetween(0.3, 0.6); // Zoom out: 0.3x to 0.6x
 
-        // If zooming away (getting smaller), move behind chest (depth -10)
-        // If zooming towards (getting bigger), stay in front (depth 1100)
+        // If zooming away (getting smaller), move behind chest (depth 15)
+        // If zooming towards (getting bigger), stay in front (depth 100)
         if (!zoomTowards) {
-          emerald.setDepth(-10); // Behind chest (chest is at default depth 0)
+          emerald.setDepth(15); // Behind chest (20) but in front of sun (10) and sparkles (5)
         }
 
         this.tweens.add({
@@ -1623,8 +1623,8 @@ export default class MainScene extends Phaser.Scene {
     // Track this sprite for UI slide-in monitoring
     this.activeConfettiSprites.add(energy);
 
-    // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
-    energy.setDepth(1100);
+    // Set depth in front of sun (10), sparkles (5), and chest (20)
+    energy.setDepth(100);
 
     // Larger scale for visibility (same size as emerald)
     const scale = 0.9;
@@ -1658,10 +1658,10 @@ export default class MainScene extends Phaser.Scene {
           ? Phaser.Math.FloatBetween(1.5, 3.0)  // Zoom in: 1.5x to 3.0x
           : Phaser.Math.FloatBetween(0.3, 0.6); // Zoom out: 0.3x to 0.6x
 
-        // If zooming away (getting smaller), move behind chest (depth -10)
-        // If zooming towards (getting bigger), stay in front (depth 1100)
+        // If zooming away (getting smaller), move behind chest (depth 15)
+        // If zooming towards (getting bigger), stay in front (depth 100)
         if (!zoomTowards) {
-          energy.setDepth(-10); // Behind chest (chest is at default depth 0)
+          energy.setDepth(15); // Behind chest (20) but in front of sun (10) and sparkles (5)
         }
 
         this.tweens.add({
