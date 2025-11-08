@@ -224,6 +224,14 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       this.scene.gemsState.set(0);
       this.scene.batteryState.set(100);
 
+      // Reset first-time events to default (brand new player experience)
+      this.scene.firstTimeEvents = {
+        guaranteed_mega_jackpot: false,
+        tutorial_completed: false,
+        welcome_bonus_claimed: false
+      };
+      console.log('First-time events reset to defaults');
+
       // Update UI immediately
       this.scene.statusBar.setResource('coins', 0, true);
       this.scene.statusBar.setResource('gems', 0, true);
@@ -237,7 +245,12 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
             coins: 0,
             gems: 0,
             energy: 100,
-            last_energy_update: new Date().toISOString()
+            last_energy_update: new Date().toISOString(),
+            first_time_events: {
+              guaranteed_mega_jackpot: false,
+              tutorial_completed: false,
+              welcome_bonus_claimed: false
+            }
           })
           .eq('telegram_id', this.scene.telegramUser.id);
 
