@@ -1541,7 +1541,7 @@ export default class MainScene extends Phaser.Scene {
       this.statusBar.setResource('gems', newTotal, true);
 
       // Create floating "+1 Emerald" text (bright green color)
-      const floatingText = this.add.text(chestX, chestY, '+1 Emerald', {
+      const floatingText = this.add.text(chestX, chestY, '+1 Gem', {
         fontFamily: 'Tilt Warp',
         fontSize: '48px',
         fill: '#a1fe26', // Bright green for emerald
