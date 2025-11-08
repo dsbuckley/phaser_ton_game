@@ -1527,6 +1527,11 @@ export default class MainScene extends Phaser.Scene {
       // Play emerald collection sound
       this.sound.play('emerald_sound');
 
+      // Trigger success haptic feedback for specialty item collection
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+
       // Update gems state
       const currentGems = this.gemsState.get();
       const newTotal = currentGems + 1;
@@ -1691,6 +1696,11 @@ export default class MainScene extends Phaser.Scene {
 
       // Play energy collection sound
       this.sound.play('energy_collect_sound');
+
+      // Trigger success haptic feedback for specialty item collection
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
 
       // Update energy state (+1, no cap)
       const currentEnergy = this.batteryState.get();
