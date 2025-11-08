@@ -61,6 +61,14 @@ export default class MainScene extends Phaser.Scene {
       shop: { show: false, text: null }
     });
 
+    // Initialize first-time events tracking (loaded from database in initializeUser)
+    // Tracks one-time special events like guaranteed mega jackpot, tutorial, etc.
+    this.firstTimeEvents = {
+      guaranteed_mega_jackpot: false,
+      tutorial_completed: false,
+      welcome_bonus_claimed: false
+    };
+
     // Initialize offline energy to 0 (will be calculated from database in initializeUser)
     this.offlineEnergyGained = 0;
 
@@ -970,6 +978,15 @@ export default class MainScene extends Phaser.Scene {
         this.userLevelState.set(stats.user_level || 1);
         this.totalChestsOpenedState.set(stats.total_chests_opened || 0);
 
+        // Load first-time events from database (JSONB field)
+        if (stats.first_time_events) {
+          this.firstTimeEvents = stats.first_time_events;
+          console.log('First-time events loaded:', this.firstTimeEvents);
+        } else {
+          // Default structure if not in database
+          console.log('No first_time_events in database, using defaults');
+        }
+
         console.log('Energy loaded from database and set to:', this.batteryState.get());
 
         // Calculate server-side hourly energy grants using last_energy_grant_hour
@@ -1014,7 +1031,8 @@ export default class MainScene extends Phaser.Scene {
           energy: this.batteryState.get(),
           user_level: this.userLevelState.get(),
           total_chests_opened: this.totalChestsOpenedState.get(),
-          last_energy_update: new Date().toISOString()
+          last_energy_update: new Date().toISOString(),
+          first_time_events: this.firstTimeEvents // Include first-time events for new users
         };
 
         const { data: newStats, error: createError } = await this.supabase
@@ -1057,7 +1075,8 @@ export default class MainScene extends Phaser.Scene {
         user_level: this.userLevelState.get(),
         total_chests_opened: this.totalChestsOpenedState.get(),
         last_energy_update: new Date().toISOString(),
-        last_energy_grant_hour: lastGrantHourISO
+        last_energy_grant_hour: lastGrantHourISO,
+        first_time_events: this.firstTimeEvents // Persist first-time events to database
       };
 
       const { error } = await this.supabase
@@ -1182,6 +1201,24 @@ export default class MainScene extends Phaser.Scene {
     }
   }
 
+  /**
+   * Check if user qualifies for guaranteed mega jackpot (first-time experience)
+   * Triggers when energy drops to 10 or below for the first time
+   * @returns {boolean} True if guaranteed jackpot should trigger
+   */
+  checkGuaranteedMegaJackpot() {
+    const currentEnergy = this.batteryState.get();
+    const guaranteedJackpotUsed = this.firstTimeEvents.guaranteed_mega_jackpot;
+
+    // Condition: Energy at or below 10 AND flag not yet set
+    if (currentEnergy <= 10 && !guaranteedJackpotUsed) {
+      console.log('🎰 GUARANTEED MEGA JACKPOT TRIGGERED! (First-time experience)');
+      return true;
+    }
+
+    return false;
+  }
+
   openChest() {
     // Prevent opening chest during mega jackpot
     if (this.isJackpotPlaying) {
@@ -1251,12 +1288,23 @@ export default class MainScene extends Phaser.Scene {
     // Note: startUISlideBackMonitoring() is now called AFTER confetti spawns
     // to prevent race condition where monitoring checks empty Set before confetti exists
 
+    // Check for guaranteed mega jackpot (first-time experience)
+    const guaranteedJackpot = this.checkGuaranteedMegaJackpot();
+
     // Determine payout size with new probability distribution
     const rand = Math.random();
     let coinReward, isMegaJackpot = false, isBigPayout = false;
 
-    if (rand < 0.012) {
-      // 1% mega jackpot
+    if (guaranteedJackpot) {
+      // 🎰 GUARANTEED MEGA JACKPOT (first-time experience at energy ≤ 10)
+      isMegaJackpot = true;
+      coinReward = 5000; // Fixed 5,000 coins for guaranteed jackpot
+
+      // Mark as used in database
+      this.firstTimeEvents.guaranteed_mega_jackpot = true;
+      console.log('First-time mega jackpot flag set to true');
+    } else if (rand < 0.012) {
+      // 1% mega jackpot (normal probability)
       isMegaJackpot = true;
       coinReward = Phaser.Utils.Array.GetRandom([1500, 2000, 2500, 3000, 5000]);
     } else if (rand < 0.20) {

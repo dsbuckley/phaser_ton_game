@@ -35,6 +35,14 @@ CREATE TABLE IF NOT EXISTS user_stats (
   high_score INTEGER DEFAULT 0 CHECK (high_score >= 0),
   total_chests_opened INTEGER DEFAULT 0 CHECK (total_chests_opened >= 0),
 
+  -- First-time user experience tracking (JSONB for flexibility)
+  -- Stores boolean flags for one-time events (tutorial, guaranteed rewards, etc.)
+  first_time_events JSONB DEFAULT '{
+    "guaranteed_mega_jackpot": false,
+    "tutorial_completed": false,
+    "welcome_bonus_claimed": false
+  }'::jsonb,
+
   -- Metadata
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -49,6 +57,10 @@ CREATE TABLE IF NOT EXISTS user_stats (
 -- ============================================
 CREATE INDEX IF NOT EXISTS idx_user_stats_telegram_id
 ON user_stats(telegram_id);
+
+-- Index for JSONB first_time_events queries (GIN index for JSONB)
+CREATE INDEX IF NOT EXISTS idx_first_time_events
+ON user_stats USING GIN (first_time_events);
 
 -- ============================================
 -- STEP 4: Create updated_at trigger function
@@ -190,6 +202,32 @@ ADD COLUMN IF NOT EXISTS last_energy_grant_hour TIMESTAMP WITH TIME ZONE DEFAULT
 UPDATE user_stats
 SET last_energy_grant_hour = date_trunc('hour', NOW())
 WHERE last_energy_grant_hour IS NULL;
+
+-- ============================================
+-- MIGRATION: Add first_time_events column
+-- ============================================
+-- Run this if you already have an existing user_stats table
+
+-- Add first_time_events JSONB column
+ALTER TABLE user_stats
+ADD COLUMN IF NOT EXISTS first_time_events JSONB DEFAULT '{
+  "guaranteed_mega_jackpot": false,
+  "tutorial_completed": false,
+  "welcome_bonus_claimed": false
+}'::jsonb;
+
+-- Initialize existing users with default first_time_events structure
+UPDATE user_stats
+SET first_time_events = '{
+  "guaranteed_mega_jackpot": false,
+  "tutorial_completed": false,
+  "welcome_bonus_claimed": false
+}'::jsonb
+WHERE first_time_events IS NULL;
+
+-- Create GIN index for JSONB queries if not exists
+CREATE INDEX IF NOT EXISTS idx_first_time_events
+ON user_stats USING GIN (first_time_events);
 
 -- ============================================
 -- PRODUCTION SECURITY NOTES

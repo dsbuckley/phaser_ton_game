@@ -232,6 +232,103 @@ openChest() {
 
 **Use Cases:** Energy systems, stamina bars, action cooldowns, daily limits
 
+### BottomTabMenu (`src/components/BottomTabMenu.js`)
+Bottom navigation bar with 5 equal-width tabs for scene navigation.
+
+```javascript
+const tabMenu = new BottomTabMenu(scene, centerX, bottomY, {
+  bgTexture: 'statusbar_bg_small',
+  tabs: [
+    {
+      key: 'main',
+      icon: 'icon_heart',
+      label: 'MAIN',
+      showNotification: false,
+      onTap: () => this.scene.start('MainScene')
+    },
+    {
+      key: 'stickers',
+      icon: 'icon_picture',
+      label: 'STICKERS',
+      showNotification: true,
+      onTap: () => console.log('Stickers tapped')
+    }
+    // ... more tabs (typically 5 total)
+  ]
+});
+scene.add.existing(tabMenu);
+tabMenu.setScrollFactor(0).setDepth(1000);
+
+// Update notification dot
+tabMenu.setNotification('stickers', true); // Show dot
+tabMenu.setNotification('stickers', false); // Hide dot
+
+// Set active tab
+tabMenu.setActiveTab('main');
+```
+
+**Architecture:** Container-based component with 5 equal-width tabs
+**Layout:** Tabs evenly distributed across screen width, icons above labels
+**Features:** Notification dots (red with white stroke), interactive tap effects (tint + scale), active state highlighting
+**NineSlice Background:** Uses same `statusbar_bg_small` as StatusBar for consistency
+**Methods:** `setNotification(key, show)`, `setActiveTab(key)`, `getActiveTab()`
+**Use Cases:** Bottom navigation, scene switching, menu systems
+
+### EnergyCountdownTimer (`src/components/EnergyCountdownTimer.js`)
+Compact countdown timer showing time until next hourly energy grant.
+
+```javascript
+const timer = new EnergyCountdownTimer(scene, x, y, {
+  width: 200,
+  height: 30,
+  bgTexture: 'slider_bg',
+  fillTexture: 'slider_fill_blue'
+});
+scene.add.existing(timer);
+timer.setScrollFactor(0).setDepth(999);
+
+// Auto-updates every second, no manual update needed
+```
+
+**Architecture:** Container-based component with NineSlice progress bar and text
+**Layout:** Progress bar fills left-to-right, text centered inside bar
+**Features:** Auto-updates every second, shows MM:SS countdown format
+**Display Logic:** Only visible when energy < 100, hides at full energy
+**Text Formatting:** "Free energy in MM:SS" using LINESeed font
+**Use Cases:** Energy regeneration timers, cooldown indicators, timed events
+
+### SettingsModal (`src/components/SettingsModal.js`)
+Modal dialog for game settings with sound and haptic toggles.
+
+```javascript
+const settingsModal = new SettingsModal(scene, {
+  onSoundToggle: (enabled) => {
+    if (enabled) scene.sound.resumeAll();
+    else scene.sound.pauseAll();
+  },
+  onHapticToggle: (enabled) => {
+    console.log('Haptic feedback:', enabled);
+  }
+});
+scene.add.existing(settingsModal);
+settingsModal.setScrollFactor(0).setDepth(2000);
+
+// Show/hide modal
+settingsModal.show(); // Opens with fade-in animation
+settingsModal.hide(); // Closes with fade-out animation
+```
+
+**Architecture:** Full-screen overlay with centered modal dialog
+**Features:**
+- Dark semi-transparent background (0x000000, alpha 0.7)
+- Persistent state for sound/haptic preferences
+- Animated transitions (fade in/out, scale effects)
+- Close button in top-right corner
+- Dev-only "Reset Stats" button (Telegram ID 253305963)
+**State Persistence:** Uses `withPersistentState` for `soundEnabled` and `hapticEnabled`
+**Methods:** `show()`, `hide()`, `getSoundEnabled()`, `getHapticEnabled()`
+**Use Cases:** Settings screens, preferences dialogs, pause menus
+
 ### NineSlice Pattern (WebGL Only)
 **Critical for scalable UI elements that preserve corner/edge integrity.**
 
