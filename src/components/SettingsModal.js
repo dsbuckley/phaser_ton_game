@@ -35,6 +35,13 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.soundEnabledState = withPersistentState(scene, 'soundEnabled', true);
     this.hapticEnabledState = withPersistentState(scene, 'hapticEnabled', true);
 
+    // Check if current user should see reset button (only for Telegram ID 253305963)
+    this.showResetButton = false;
+    if (scene.telegramUser && scene.telegramUser.id === 253305963) {
+      this.showResetButton = true;
+      console.log('Reset Stats button enabled for dev user');
+    }
+
     // Modal dimensions - match reference better
     this.modalWidth = Math.min(500, scene.scale.width * 0.9);
     this.modalHeight = 380;
@@ -106,6 +113,11 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.headerText.setOrigin(0.5);
     this.add(this.headerText);
 
+    // Reset Stats button (only for dev user ID 253305963)
+    if (this.showResetButton) {
+      this.createResetButton(centerX, centerY - this.modalHeight / 2 + 95);
+    }
+
     // Close button - smaller and better positioned
     this.closeButton = this.scene.add.image(
       centerX + this.modalWidth / 2 - 35,
@@ -141,6 +153,123 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
         this.config.onHapticToggle(enabled);
       }
     );
+  }
+
+  /**
+   * Creates the Reset Stats button (only visible for dev user)
+   */
+  createResetButton(x, y) {
+    // Create button background
+    const buttonBg = this.scene.add.rectangle(x, y, 140, 35, 0xff4444); // Red background
+    buttonBg.setStrokeStyle(2, 0x000000); // Black border
+    buttonBg.setInteractive({ useHandCursor: true });
+    this.add(buttonBg);
+
+    // Create button text
+    const buttonText = this.scene.add.text(x, y, 'Reset Stats', {
+      fontFamily: 'LINESeed',
+      fontSize: '14px',
+      fill: '#FFFFFF',
+      fontStyle: 'bold',
+      resolution: 2
+    });
+    buttonText.setOrigin(0.5);
+    this.add(buttonText);
+
+    // Store references
+    this.resetButton = buttonBg;
+    this.resetButtonText = buttonText;
+
+    // Button press animation
+    buttonBg.on('pointerdown', () => {
+      buttonBg.setScale(0.95);
+      buttonText.setScale(0.95);
+
+      // Haptic feedback
+      if (this.hapticEnabledState.get() && window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+      }
+    });
+
+    // Button release and action
+    buttonBg.on('pointerup', () => {
+      buttonBg.setScale(1.0);
+      buttonText.setScale(1.0);
+
+      // Play button sound
+      if (this.scene.sound) {
+        this.scene.sound.play('button_sound');
+      }
+
+      // Execute reset
+      this.resetStats();
+    });
+  }
+
+  /**
+   * Reset game stats to default values (coins=0, gems=0, energy=100)
+   * Only callable by dev user (Telegram ID 253305963)
+   */
+  async resetStats() {
+    if (!this.showResetButton) {
+      console.warn('Reset stats called by unauthorized user');
+      return;
+    }
+
+    console.log('Resetting stats to defaults...');
+
+    try {
+      // Reset localStorage values
+      this.scene.coinsState.set(0);
+      this.scene.gemsState.set(0);
+      this.scene.batteryState.set(100);
+
+      // Update UI immediately
+      this.scene.statusBar.setResource('coins', 0, true);
+      this.scene.statusBar.setResource('gems', 0, true);
+      this.scene.statusBar.setResource('energy', 100, true);
+
+      // Reset in Supabase database
+      if (this.scene.supabase && this.scene.telegramUser) {
+        const { error } = await this.scene.supabase
+          .from('user_stats')
+          .update({
+            coins: 0,
+            gems: 0,
+            energy: 100,
+            last_energy_update: new Date().toISOString()
+          })
+          .eq('telegram_id', this.scene.telegramUser.id);
+
+        if (error) {
+          throw error;
+        }
+
+        console.log('Stats reset successfully in database');
+      }
+
+      // Show success feedback
+      if (this.hapticEnabledState.get() && window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+
+      // Flash the button text to confirm action
+      this.scene.tweens.add({
+        targets: this.resetButtonText,
+        alpha: 0.3,
+        duration: 100,
+        yoyo: true,
+        repeat: 2
+      });
+
+    } catch (error) {
+      console.error('Failed to reset stats:', error);
+
+      // Error haptic feedback
+      if (this.hapticEnabledState.get() && window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+      }
+    }
   }
 
   /**
