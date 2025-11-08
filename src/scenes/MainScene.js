@@ -1345,10 +1345,10 @@ export default class MainScene extends Phaser.Scene {
       const velocityX = isBigPayout
         ? Phaser.Math.Between(-350, 350) // Big payout: wider spread (700px range)
         : Phaser.Math.Between(-200, 200); // Normal: standard spread (400px range)
-      // Big payouts fly much higher
+      // Random height variation for all coins
       const velocityY = isBigPayout
-        ? Phaser.Math.Between(-700, -900) // Big payout: launch higher
-        : Phaser.Math.Between(-400, -600); // Normal: same as before
+        ? Phaser.Math.Between(-400, -1000) // Big payout: random height (low to very high)
+        : Phaser.Math.Between(-400, -1000); // Normal: same random range
       coin.setVelocity(velocityX, velocityY);
 
       // Apply gravity for realistic arc
@@ -1367,11 +1367,22 @@ export default class MainScene extends Phaser.Scene {
         duration: 150,
         ease: 'Back.out',
         onComplete: () => {
-          // Zoom towards camera effect - scale up 2.5x to simulate approaching
+          // Random zoom effect - 50% chance towards camera (bigger), 50% away (smaller)
+          const zoomTowards = Math.random() < 0.5;
+          const zoomMultiplier = zoomTowards
+            ? Phaser.Math.FloatBetween(1.5, 3.0)  // Zoom in: 1.5x to 3.0x
+            : Phaser.Math.FloatBetween(0.3, 0.6); // Zoom out: 0.3x to 0.6x
+
+          // If zooming away (getting smaller), move behind chest (depth -10)
+          // If zooming towards (getting bigger), stay in front (depth 1100)
+          if (!zoomTowards) {
+            coin.setDepth(-10); // Behind chest (chest is at default depth 0)
+          }
+
           this.tweens.add({
             targets: coin,
-            scaleX: scale * 2.5,
-            scaleY: scale * 2.5,
+            scaleX: scale * zoomMultiplier,
+            scaleY: scale * zoomMultiplier,
             duration: 1000,
             ease: 'Power2.easeIn',
             delay: 200
