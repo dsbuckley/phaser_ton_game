@@ -450,6 +450,81 @@ export default class StatusBar extends Phaser.GameObjects.Container {
   }
 
   /**
+   * Slide only the avatar and settings button (keep resource pills visible)
+   * @param {number} targetYOffset - Offset to slide by (negative = up, positive = down)
+   * @param {number} duration - Animation duration in milliseconds
+   * @param {string} ease - Easing function (e.g., 'Power2.easeIn', 'Power2.easeOut')
+   */
+  slideAvatarAndControls(targetYOffset, duration = 400, ease = 'Power2.easeIn') {
+    const elementsToSlide = [];
+
+    // Collect avatar elements
+    if (this.avatarFrame) elementsToSlide.push(this.avatarFrame);
+    if (this.avatarImage) elementsToSlide.push(this.avatarImage);
+    if (this.levelCircle) elementsToSlide.push(this.levelCircle);
+    if (this.levelNumberText) elementsToSlide.push(this.levelNumberText);
+    if (this.usernameText) elementsToSlide.push(this.usernameText);
+
+    // Add settings button
+    if (this.settingsButton) elementsToSlide.push(this.settingsButton);
+
+    // Slide all collected elements
+    if (elementsToSlide.length > 0) {
+      this.scene.tweens.add({
+        targets: elementsToSlide,
+        y: `+=${targetYOffset}`, // Relative offset
+        duration: duration,
+        ease: ease
+      });
+    }
+
+    // Slide HTML avatar overlay
+    if (this.htmlAvatarContainer) {
+      const currentTop = parseFloat(this.htmlAvatarContainer.style.top) || 0;
+      const newTop = currentTop + targetYOffset;
+
+      this.slideHTMLAvatarAbsolute(newTop, duration, ease);
+    }
+  }
+
+  /**
+   * Animate HTML avatar to absolute screen position (helper for slideAvatarAndControls)
+   * @param {number} targetScreenY - Target Y position in screen coordinates (pixels)
+   * @param {number} duration - Animation duration in milliseconds
+   * @param {string} ease - Easing function
+   */
+  slideHTMLAvatarAbsolute(targetScreenY, duration = 400, ease = 'Power2.easeOut') {
+    if (!this.htmlAvatarContainer) return;
+
+    const startY = parseFloat(this.htmlAvatarContainer.style.top) || 0;
+    const endY = targetScreenY;
+
+    // Animate using requestAnimationFrame
+    const startTime = Date.now();
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Apply easing
+      let easedProgress = progress;
+      if (ease === 'Power2.easeOut') {
+        easedProgress = 1 - Math.pow(1 - progress, 2);
+      } else if (ease === 'Power2.easeIn') {
+        easedProgress = Math.pow(progress, 2);
+      }
+
+      const currentY = startY + (endY - startY) * easedProgress;
+      this.htmlAvatarContainer.style.top = currentY + 'px';
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  /**
    * Update a resource value
    * @param {string} key - Resource key (e.g., 'coins', 'energy')
    * @param {number} value - New value

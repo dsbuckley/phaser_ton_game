@@ -1965,27 +1965,26 @@ export default class MainScene extends Phaser.Scene {
   }
 
   /**
-   * Slide UI elements out of screen (upward)
+   * Slide UI elements out of screen (upward for top, downward for bottom)
+   * Only slides clickable elements - keeps resource stats visible
    */
   slideUIOut() {
-    // Slide StatusBar up
-    this.tweens.add({
-      targets: this.statusBar,
-      y: -150,
-      duration: 400,
-      ease: 'Power2.easeIn'
-    });
-
-    // Slide HTML avatar overlay up
-    if (this.statusBar && this.statusBar.slideHTMLAvatar) {
-      this.statusBar.slideHTMLAvatar(-150, 400, 'Power2.easeIn');
+    // Slide only avatar and settings button from StatusBar (keep resource pills visible)
+    if (this.statusBar && this.statusBar.slideAvatarAndControls) {
+      this.statusBar.slideAvatarAndControls(-180, 400, 'Power2.easeIn'); // Slide up by 180px
     }
 
-    // Slide EnergyCountdownTimer up if visible
-    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
+    // Keep EnergyCountdownTimer visible (don't slide it out)
+    // Users need to see when their energy will regenerate
+
+    // Slide BottomTabMenu down (out of screen at bottom)
+    if (this.bottomTabMenu) {
+      const screenHeight = this.cameras.main.height;
+      const slideOutY = screenHeight + 150; // Slide down past screen edge
+
       this.tweens.add({
-        targets: this.energyCountdownTimer,
-        y: -100,
+        targets: this.bottomTabMenu,
+        y: slideOutY,
         duration: 400,
         ease: 'Power2.easeIn'
       });
@@ -1993,27 +1992,26 @@ export default class MainScene extends Phaser.Scene {
   }
 
   /**
-   * Slide UI elements back into screen (downward)
+   * Slide UI elements back into screen (downward for top, upward for bottom)
+   * Brings back avatar and controls, keeps resource pills in place
    */
   slideUIIn() {
-    // Slide StatusBar down to original position
-    this.tweens.add({
-      targets: this.statusBar,
-      y: 30,
-      duration: 500,
-      ease: 'Power2.easeOut'
-    });
-
-    // Slide HTML avatar overlay down
-    if (this.statusBar && this.statusBar.slideHTMLAvatar) {
-      this.statusBar.slideHTMLAvatar(30, 500, 'Power2.easeOut');
+    // Slide avatar and settings button back to original position
+    if (this.statusBar && this.statusBar.slideAvatarAndControls) {
+      this.statusBar.slideAvatarAndControls(+180, 500, 'Power2.easeOut'); // Slide down by 180px (reverse of -180)
     }
 
-    // Slide EnergyCountdownTimer down if visible
-    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
+    // EnergyCountdownTimer stays in place (wasn't moved in slideUIOut)
+
+    // Slide BottomTabMenu up (back to original position at bottom)
+    if (this.bottomTabMenu) {
+      const screenHeight = this.cameras.main.height;
+      const barHeight = 100;
+      const originalY = screenHeight - (barHeight / 2); // Original position
+
       this.tweens.add({
-        targets: this.energyCountdownTimer,
-        y: 70,
+        targets: this.bottomTabMenu,
+        y: originalY,
         duration: 500,
         ease: 'Power2.easeOut'
       });
