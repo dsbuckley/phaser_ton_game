@@ -530,7 +530,7 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
     // Slide HTML avatar overlay using world coordinates
     if (this.htmlAvatarContainer) {
-      this.slideHTMLAvatar(targetY + this.statusBarY, duration, ease);
+      this.slideHTMLAvatar(targetY, duration, ease);
     }
   }
 

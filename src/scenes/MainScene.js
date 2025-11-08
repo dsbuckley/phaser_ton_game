@@ -1248,8 +1248,8 @@ export default class MainScene extends Phaser.Scene {
     const chestsOpened = this.totalChestsOpenedState.get();
     this.totalChestsOpenedState.set(chestsOpened + 1);
 
-    // Start monitoring for when to slide UI back in
-    this.startUISlideBackMonitoring();
+    // Note: startUISlideBackMonitoring() is now called AFTER confetti spawns
+    // to prevent race condition where monitoring checks empty Set before confetti exists
 
     // Determine payout size with new probability distribution
     const rand = Math.random();
@@ -1319,6 +1319,9 @@ export default class MainScene extends Phaser.Scene {
             });
           }
         }
+
+        // Start monitoring AFTER confetti exists to prevent race condition
+        this.startUISlideBackMonitoring();
       });
 
       // Play closing animation after opening completes
@@ -1890,6 +1893,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Start streaming timer after 700ms delay
     this.time.delayedCall(700, () => {
+      // Start monitoring AFTER first confetti burst for mega jackpot
+      this.startUISlideBackMonitoring();
+
       const burstTimer = this.time.addEvent({
         delay: burstInterval,
         callback: () => {
