@@ -405,6 +405,51 @@ export default class StatusBar extends Phaser.GameObjects.Container {
   }
 
   /**
+   * Animate the HTML avatar overlay position
+   * @param {number} targetY - Target Y position in Phaser world coordinates
+   * @param {number} duration - Animation duration in milliseconds
+   * @param {string} ease - Easing function (e.g., 'Power2.easeOut')
+   */
+  slideHTMLAvatar(targetY, duration = 400, ease = 'Power2.easeOut') {
+    if (!this.htmlAvatarContainer) return;
+
+    const canvas = this.scene.game.canvas;
+    const canvasRect = canvas.getBoundingClientRect();
+
+    const avatarX = 35;
+    const worldX = avatarX;
+    const screenX = canvasRect.left + worldX - 24;
+
+    // Calculate start and end positions
+    const startY = parseFloat(this.htmlAvatarContainer.style.top) || 0;
+    const endY = canvasRect.top + targetY - 24;
+
+    // Animate using requestAnimationFrame for smooth CSS animation
+    const startTime = Date.now();
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+
+      // Apply easing (Power2.easeOut approximation)
+      let easedProgress = progress;
+      if (ease === 'Power2.easeOut') {
+        easedProgress = 1 - Math.pow(1 - progress, 2);
+      } else if (ease === 'Power2.easeIn') {
+        easedProgress = Math.pow(progress, 2);
+      }
+
+      const currentY = startY + (endY - startY) * easedProgress;
+      this.htmlAvatarContainer.style.top = currentY + 'px';
+
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      }
+    };
+
+    requestAnimationFrame(animate);
+  }
+
+  /**
    * Update a resource value
    * @param {string} key - Resource key (e.g., 'coins', 'energy')
    * @param {number} value - New value

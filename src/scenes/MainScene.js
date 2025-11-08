@@ -19,6 +19,8 @@ export default class MainScene extends Phaser.Scene {
     this.lastClickTime = 0;
     this.batteryRegenTimer = null;
     this.isJackpotPlaying = false;
+    this.activeConfettiSprites = new Set(); // Track active confetti sprites
+    this.uiSlideCheckTimer = null; // Timer for checking when to slide UI back in
   }
 
   async create() {
@@ -1224,6 +1226,9 @@ export default class MainScene extends Phaser.Scene {
       window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
     }
 
+    // Slide UI out of screen
+    this.slideUIOut();
+
     // Decrease battery by 1
     const newBattery = currentBattery - 1;
     this.batteryState.set(newBattery);
@@ -1240,6 +1245,9 @@ export default class MainScene extends Phaser.Scene {
     // Increment total chests opened counter
     const chestsOpened = this.totalChestsOpenedState.get();
     this.totalChestsOpenedState.set(chestsOpened + 1);
+
+    // Start monitoring for when to slide UI back in
+    this.startUISlideBackMonitoring();
 
     // Determine payout size with new probability distribution
     const rand = Math.random();
@@ -1333,6 +1341,9 @@ export default class MainScene extends Phaser.Scene {
       // Create coin sprite
       const coin = this.physics.add.sprite(chestX, chestY, 'statusbar_coin');
 
+      // Track this sprite for UI slide-in monitoring
+      this.activeConfettiSprites.add(coin);
+
       // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
       coin.setDepth(1100);
 
@@ -1399,6 +1410,8 @@ export default class MainScene extends Phaser.Scene {
           duration: 500,
           ease: 'Power2',
           onComplete: () => {
+            // Remove from tracking set before destroying
+            this.activeConfettiSprites.delete(coin);
             coin.destroy();
           }
         });
@@ -1447,6 +1460,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Create single emerald sprite with physics
     const emerald = this.physics.add.sprite(chestX, chestY, 'statusbar_gem');
+
+    // Track this sprite for UI slide-in monitoring
+    this.activeConfettiSprites.add(emerald);
 
     // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
     emerald.setDepth(1100);
@@ -1543,7 +1559,8 @@ export default class MainScene extends Phaser.Scene {
         onComplete: () => floatingText.destroy()
       });
 
-      // Destroy emerald immediately on click
+      // Remove from tracking set and destroy emerald immediately on click
+      this.activeConfettiSprites.delete(emerald);
       emerald.destroy();
     });
 
@@ -1586,6 +1603,8 @@ export default class MainScene extends Phaser.Scene {
                       duration: 200,
                       ease: 'Power2',
                       onComplete: () => {
+                        // Remove from tracking set before destroying
+                        this.activeConfettiSprites.delete(emerald);
                         emerald.destroy();
                       }
                     });
@@ -1606,6 +1625,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Create single energy sprite with physics
     const energy = this.physics.add.sprite(chestX, chestY, 'statusbar_energy');
+
+    // Track this sprite for UI slide-in monitoring
+    this.activeConfettiSprites.add(energy);
 
     // Set depth in front of bottom tab menu (1000) but behind status bar (2000)
     energy.setDepth(1100);
@@ -1710,7 +1732,8 @@ export default class MainScene extends Phaser.Scene {
         onComplete: () => floatingText.destroy()
       });
 
-      // Destroy energy immediately on click
+      // Remove from tracking set and destroy energy immediately on click
+      this.activeConfettiSprites.delete(energy);
       energy.destroy();
     });
 
@@ -1753,6 +1776,8 @@ export default class MainScene extends Phaser.Scene {
                       duration: 200,
                       ease: 'Power2',
                       onComplete: () => {
+                        // Remove from tracking set before destroying
+                        this.activeConfettiSprites.delete(energy);
                         energy.destroy();
                       }
                     });
@@ -1937,6 +1962,91 @@ export default class MainScene extends Phaser.Scene {
       loop: true
     });
     }); // Close delayedCall callback
+  }
+
+  /**
+   * Slide UI elements out of screen (upward)
+   */
+  slideUIOut() {
+    // Slide StatusBar up
+    this.tweens.add({
+      targets: this.statusBar,
+      y: -150,
+      duration: 400,
+      ease: 'Power2.easeIn'
+    });
+
+    // Slide HTML avatar overlay up
+    if (this.statusBar && this.statusBar.slideHTMLAvatar) {
+      this.statusBar.slideHTMLAvatar(-150, 400, 'Power2.easeIn');
+    }
+
+    // Slide EnergyCountdownTimer up if visible
+    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
+      this.tweens.add({
+        targets: this.energyCountdownTimer,
+        y: -100,
+        duration: 400,
+        ease: 'Power2.easeIn'
+      });
+    }
+  }
+
+  /**
+   * Slide UI elements back into screen (downward)
+   */
+  slideUIIn() {
+    // Slide StatusBar down to original position
+    this.tweens.add({
+      targets: this.statusBar,
+      y: 30,
+      duration: 500,
+      ease: 'Power2.easeOut'
+    });
+
+    // Slide HTML avatar overlay down
+    if (this.statusBar && this.statusBar.slideHTMLAvatar) {
+      this.statusBar.slideHTMLAvatar(30, 500, 'Power2.easeOut');
+    }
+
+    // Slide EnergyCountdownTimer down if visible
+    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
+      this.tweens.add({
+        targets: this.energyCountdownTimer,
+        y: 70,
+        duration: 500,
+        ease: 'Power2.easeOut'
+      });
+    }
+  }
+
+  /**
+   * Start monitoring for when to slide UI back in
+   * Checks every 100ms if all confetti sprites are cleared
+   */
+  startUISlideBackMonitoring() {
+    // Clear any existing timer
+    if (this.uiSlideCheckTimer) {
+      this.uiSlideCheckTimer.remove();
+    }
+
+    this.uiSlideCheckTimer = this.time.addEvent({
+      delay: 100, // Check every 100ms
+      callback: () => {
+        // Check if all confetti is cleared and not playing jackpot
+        if (this.activeConfettiSprites.size === 0 && !this.isJackpotPlaying) {
+          // Slide UI back in
+          this.slideUIIn();
+
+          // Stop checking
+          if (this.uiSlideCheckTimer) {
+            this.uiSlideCheckTimer.remove();
+            this.uiSlideCheckTimer = null;
+          }
+        }
+      },
+      loop: true
+    });
   }
 
   async onWalletConnected(wallet) {
