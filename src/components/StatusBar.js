@@ -132,6 +132,15 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     }).setOrigin(0, 0.5); // Left-aligned
 
     this.add(this.usernameText);
+
+    // Store original Y positions for slide animations
+    this.originalAvatarPositions = {
+      avatarFrame: avatarY,
+      avatarImage: avatarY,
+      levelCircle: levelCircleY,
+      levelNumberText: levelCircleY,
+      usernameText: usernameY
+    };
   }
 
   /**
@@ -303,6 +312,9 @@ export default class StatusBar extends Phaser.GameObjects.Container {
       this.config.onSettingsClick();
     });
 
+    // Store original Y position for slide animations
+    this.originalSettingsButtonY = buttonY;
+
     // Reset if dragged away
     this.settingsButton.on('pointerout', () => {
       this.settingsButton.setScale(this.settingsButtonBaseScale);
@@ -451,39 +463,74 @@ export default class StatusBar extends Phaser.GameObjects.Container {
 
   /**
    * Slide only the avatar and settings button (keep resource pills visible)
-   * @param {number} targetYOffset - Offset to slide by (negative = up, positive = down)
+   * @param {number} targetY - Absolute target Y position
    * @param {number} duration - Animation duration in milliseconds
    * @param {string} ease - Easing function (e.g., 'Power2.easeIn', 'Power2.easeOut')
    */
-  slideAvatarAndControls(targetYOffset, duration = 400, ease = 'Power2.easeIn') {
-    const elementsToSlide = [];
-
-    // Collect avatar elements
-    if (this.avatarFrame) elementsToSlide.push(this.avatarFrame);
-    if (this.avatarImage) elementsToSlide.push(this.avatarImage);
-    if (this.levelCircle) elementsToSlide.push(this.levelCircle);
-    if (this.levelNumberText) elementsToSlide.push(this.levelNumberText);
-    if (this.usernameText) elementsToSlide.push(this.usernameText);
-
-    // Add settings button
-    if (this.settingsButton) elementsToSlide.push(this.settingsButton);
-
-    // Slide all collected elements
-    if (elementsToSlide.length > 0) {
+  slideAvatarAndControls(targetY, duration = 400, ease = 'Power2.easeIn') {
+    // Slide avatar frame
+    if (this.avatarFrame) {
       this.scene.tweens.add({
-        targets: elementsToSlide,
-        y: `+=${targetYOffset}`, // Relative offset
+        targets: this.avatarFrame,
+        y: targetY + this.originalAvatarPositions.avatarFrame,
         duration: duration,
         ease: ease
       });
     }
 
-    // Slide HTML avatar overlay
-    if (this.htmlAvatarContainer) {
-      const currentTop = parseFloat(this.htmlAvatarContainer.style.top) || 0;
-      const newTop = currentTop + targetYOffset;
+    // Slide avatar image
+    if (this.avatarImage) {
+      this.scene.tweens.add({
+        targets: this.avatarImage,
+        y: targetY + this.originalAvatarPositions.avatarImage,
+        duration: duration,
+        ease: ease
+      });
+    }
 
-      this.slideHTMLAvatarAbsolute(newTop, duration, ease);
+    // Slide level circle
+    if (this.levelCircle) {
+      this.scene.tweens.add({
+        targets: this.levelCircle,
+        y: targetY + this.originalAvatarPositions.levelCircle,
+        duration: duration,
+        ease: ease
+      });
+    }
+
+    // Slide level number text
+    if (this.levelNumberText) {
+      this.scene.tweens.add({
+        targets: this.levelNumberText,
+        y: targetY + this.originalAvatarPositions.levelNumberText,
+        duration: duration,
+        ease: ease
+      });
+    }
+
+    // Slide username text
+    if (this.usernameText) {
+      this.scene.tweens.add({
+        targets: this.usernameText,
+        y: targetY + this.originalAvatarPositions.usernameText,
+        duration: duration,
+        ease: ease
+      });
+    }
+
+    // Slide settings button
+    if (this.settingsButton) {
+      this.scene.tweens.add({
+        targets: this.settingsButton,
+        y: targetY + this.originalSettingsButtonY,
+        duration: duration,
+        ease: ease
+      });
+    }
+
+    // Slide HTML avatar overlay using world coordinates
+    if (this.htmlAvatarContainer) {
+      this.slideHTMLAvatar(targetY + this.statusBarY, duration, ease);
     }
   }
 

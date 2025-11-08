@@ -1970,8 +1970,9 @@ export default class MainScene extends Phaser.Scene {
    */
   slideUIOut() {
     // Slide only avatar and settings button from StatusBar (keep resource pills visible)
+    // Use absolute position -180 (above screen)
     if (this.statusBar && this.statusBar.slideAvatarAndControls) {
-      this.statusBar.slideAvatarAndControls(-180, 400, 'Power2.easeIn'); // Slide up by 180px
+      this.statusBar.slideAvatarAndControls(-180, 400, 'Power2.easeIn');
     }
 
     // Keep EnergyCountdownTimer visible (don't slide it out)
@@ -1996,9 +1997,9 @@ export default class MainScene extends Phaser.Scene {
    * Brings back avatar and controls, keeps resource pills in place
    */
   slideUIIn() {
-    // Slide avatar and settings button back to original position
+    // Slide avatar and settings button back to original position (y: 0)
     if (this.statusBar && this.statusBar.slideAvatarAndControls) {
-      this.statusBar.slideAvatarAndControls(+180, 500, 'Power2.easeOut'); // Slide down by 180px (reverse of -180)
+      this.statusBar.slideAvatarAndControls(0, 500, 'Power2.easeOut');
     }
 
     // EnergyCountdownTimer stays in place (wasn't moved in slideUIOut)
