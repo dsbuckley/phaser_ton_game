@@ -242,6 +242,12 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
 
     this.closeButton.on('pointerup', () => {
       this.closeButton.setScale(0.5);
+
+      // Play button sound (same as BottomTabMenu and settings gear)
+      if (this.scene.sound) {
+        this.scene.sound.play('button_sound');
+      }
+
       this.hide();
     });
 
