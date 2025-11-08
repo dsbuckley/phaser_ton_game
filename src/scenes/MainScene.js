@@ -1475,9 +1475,6 @@ export default class MainScene extends Phaser.Scene {
     // Gentle spin for visual interest
     emerald.setAngularVelocity(180);
 
-    // Make it interactive (clickable)
-    emerald.setInteractive({ useHandCursor: true });
-
     // Pop-in scale animation
     emerald.setScale(0);
     this.tweens.add({
@@ -1487,6 +1484,9 @@ export default class MainScene extends Phaser.Scene {
       duration: 150,
       ease: 'Back.out',
       onComplete: () => {
+        // Make it interactive AFTER pop-in completes, so hit area is based on actual size
+        emerald.setInteractive({ useHandCursor: true });
+
         // Random zoom effect - 50% chance towards camera (bigger), 50% away (smaller)
         const zoomTowards = Math.random() < 0.5;
         const zoomMultiplier = zoomTowards
@@ -1640,9 +1640,6 @@ export default class MainScene extends Phaser.Scene {
     // Gentle spin for visual interest
     energy.setAngularVelocity(180);
 
-    // Make it interactive (clickable)
-    energy.setInteractive({ useHandCursor: true });
-
     // Pop-in scale animation
     energy.setScale(0);
     this.tweens.add({
@@ -1652,6 +1649,9 @@ export default class MainScene extends Phaser.Scene {
       duration: 150,
       ease: 'Back.out',
       onComplete: () => {
+        // Make it interactive AFTER pop-in completes, so hit area is based on actual size
+        energy.setInteractive({ useHandCursor: true });
+
         // Random zoom effect - 50% chance towards camera (bigger), 50% away (smaller)
         const zoomTowards = Math.random() < 0.5;
         const zoomMultiplier = zoomTowards
