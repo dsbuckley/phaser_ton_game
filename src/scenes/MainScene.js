@@ -1969,8 +1969,15 @@ export default class MainScene extends Phaser.Scene {
       this.statusBar.slideAvatarAndControls(-180, 400, 'Power2.easeIn');
     }
 
-    // Keep EnergyCountdownTimer visible (don't slide it out)
-    // Users need to see when their energy will regenerate
+    // Slide EnergyCountdownTimer up if visible
+    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
+      this.tweens.add({
+        targets: this.energyCountdownTimer,
+        y: -100,
+        duration: 400,
+        ease: 'Power2.easeIn'
+      });
+    }
 
     // Slide BottomTabMenu down (out of screen at bottom)
     if (this.bottomTabMenu) {
@@ -1996,7 +2003,15 @@ export default class MainScene extends Phaser.Scene {
       this.statusBar.slideAvatarAndControls(0, 500, 'Power2.easeOut');
     }
 
-    // EnergyCountdownTimer stays in place (wasn't moved in slideUIOut)
+    // Slide EnergyCountdownTimer down to original position if visible
+    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
+      this.tweens.add({
+        targets: this.energyCountdownTimer,
+        y: 70,
+        duration: 500,
+        ease: 'Power2.easeOut'
+      });
+    }
 
     // Slide BottomTabMenu up (back to original position at bottom)
     if (this.bottomTabMenu) {
