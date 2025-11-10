@@ -1967,8 +1967,8 @@ export default class MainScene extends Phaser.Scene {
 
     // Check if combo qualifies (3 or more)
     if (totalCount >= 3) {
-      // Calculate bonus: floor(count / 3) * 3
-      const bonusAmount = Math.floor(totalCount / 3) * 3;
+      // Bonus equals the total count (3x = +3, 4x = +4, 5x = +5, etc.)
+      const bonusAmount = totalCount;
 
       console.log(`🎉 COMBO BONUS! ${itemType} x${totalCount} = +${bonusAmount} bonus`);
 
