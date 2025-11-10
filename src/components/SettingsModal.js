@@ -422,10 +422,22 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.setAlpha(0);
     this.setScale(0.8);
 
-    // Dim the HTML avatar overlay (if it exists)
+    // Add black overlay to HTML avatar (if it exists)
     const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
     if (avatarOverlay && avatarOverlay.querySelector('img')) {
-      avatarOverlay.style.opacity = '0.3';
+      // Add a ::before pseudo-element style via inline element
+      const overlayDiv = document.createElement('div');
+      overlayDiv.id = 'avatar-modal-overlay';
+      overlayDiv.style.position = 'absolute';
+      overlayDiv.style.top = '0';
+      overlayDiv.style.left = '0';
+      overlayDiv.style.width = '100%';
+      overlayDiv.style.height = '100%';
+      overlayDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // 70% black, matching modal overlay
+      overlayDiv.style.borderRadius = '50%';
+      overlayDiv.style.pointerEvents = 'none';
+      overlayDiv.style.zIndex = '1';
+      avatarOverlay.appendChild(overlayDiv);
     }
 
     // Fade in overlay
@@ -447,10 +459,10 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
    * Hide the modal with animation
    */
   hide() {
-    // Restore the HTML avatar overlay opacity
-    const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
-    if (avatarOverlay && avatarOverlay.querySelector('img')) {
-      avatarOverlay.style.opacity = '1';
+    // Remove the black overlay from HTML avatar
+    const overlayDiv = document.getElementById('avatar-modal-overlay');
+    if (overlayDiv) {
+      overlayDiv.remove();
     }
 
     this.scene.tweens.add({
