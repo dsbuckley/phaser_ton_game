@@ -2003,25 +2003,18 @@ export default class MainScene extends Phaser.Scene {
       this.statusBar.setResource('gems', newGems, true);
     }
 
-    // Show combo bonus UI
+    // Show combo bonus UI (positioned higher on screen, closer to top)
     const centerX = this.cameras.main.width / 2;
-    const centerY = this.cameras.main.height / 2;
+    const topY = this.cameras.main.height * 0.25; // 25% from top (higher than center)
 
-    const comboBonusDisplay = new ComboBonusDisplay(this, centerX, centerY, {
+    const comboBonusDisplay = new ComboBonusDisplay(this, centerX, topY, {
       itemType: itemType,
       bonusAmount: bonusAmount
     });
     this.add.existing(comboBonusDisplay);
     comboBonusDisplay.setScrollFactor(0).setDepth(3000); // Top layer
 
-    // Play sound effect (reuse existing collect sound)
-    if (itemType === 'energy') {
-      this.sound.play('energy_collect_sound');
-    } else if (itemType === 'gems') {
-      this.sound.play('emerald_sound');
-    }
-
-    // Play combo sound effect
+    // Play combo sound effect only
     this.sound.play('combo_sound');
 
     // Trigger haptic feedback
