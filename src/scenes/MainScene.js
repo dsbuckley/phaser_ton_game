@@ -1909,6 +1909,11 @@ export default class MainScene extends Phaser.Scene {
    * @param {number} rewardAmount - Amount to give (usually 1)
    */
   handleSpecialtyItemClick(itemType, rewardAmount) {
+    // Skip combo tracking during mega jackpot
+    if (this.isJackpotPlaying) {
+      return;
+    }
+
     const now = this.time.now;
     const timeSinceLastClick = now - this.comboTracker.lastClickTime;
 
