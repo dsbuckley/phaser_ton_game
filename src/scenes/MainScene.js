@@ -1303,17 +1303,17 @@ export default class MainScene extends Phaser.Scene {
       // Mark as used in database
       this.firstTimeEvents.guaranteed_mega_jackpot = true;
       console.log('First-time mega jackpot flag set to true');
-    } else if (rand < 0.012) {
+    } else if (rand < 0.01) {
       // 1% mega jackpot (normal probability)
       isMegaJackpot = true;
-      coinReward = Phaser.Utils.Array.GetRandom([1500, 2000, 2500, 3000, 5000]);
+      coinReward = Phaser.Utils.Array.GetRandom([3000, 4000, 5000]);
     } else if (rand < 0.20) {
-      // 15% big payout
+      // 20% big payout
       isBigPayout = true;
       coinReward = Phaser.Utils.Array.GetRandom([50, 75, 100, 125, 150]);
     } else {
       // 80% normal payout
-      coinReward = Phaser.Math.Between(1, 9);
+      coinReward = Phaser.Math.Between(3, 49);
     }
 
     // Determine if emerald reward should spawn (10% chance for non-mega jackpots)
