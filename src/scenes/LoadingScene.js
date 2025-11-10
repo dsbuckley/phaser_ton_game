@@ -95,6 +95,9 @@ export default class LoadingScene extends Phaser.Scene {
     // Battery bar icon
     loader.image('battery_icon', '/assets/Components/Icon_ItemIcons/512/ItemIcon_Battery.png');
 
+    // Auto Pop item icon
+    loader.image('autopop_icon', '/assets/Components/UI_Etc/ItemIcon_Battery.png');
+
     // Bottom tab menu icons
     loader.image('icon_heart', '/assets/Components/IconMisc/Icon_Heart01.png');
     loader.image('icon_picture', '/assets/Components/IconMisc/Icon_Picture.png');

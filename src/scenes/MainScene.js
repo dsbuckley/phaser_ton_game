@@ -20,6 +20,9 @@ export default class MainScene extends Phaser.Scene {
     this.lastClickTime = 0;
     this.batteryRegenTimer = null;
     this.isJackpotPlaying = false;
+    this.isAutoPopping = false; // Flag to prevent manual clicks during auto-pop sequence
+    this.autoPopCountText = null; // Reference to countdown text
+    this.autoPopPopsRemaining = 0; // Counter for remaining auto-pops (can stack)
     this.activeConfettiSprites = new Set(); // Track active confetti sprites
     this.uiSlideCheckTimer = null; // Timer for checking when to slide UI back in
 
@@ -1230,8 +1233,8 @@ export default class MainScene extends Phaser.Scene {
   }
 
   openChest() {
-    // Prevent opening chest during mega jackpot
-    if (this.isJackpotPlaying) {
+    // Prevent opening chest during mega jackpot OR auto-pop sequence
+    if (this.isJackpotPlaying || this.isAutoPopping) {
       return;
     }
 
@@ -1332,6 +1335,9 @@ export default class MainScene extends Phaser.Scene {
     // Determine if energy reward should spawn (25% chance for non-mega jackpots)
     const isEnergyReward = !isMegaJackpot && (Math.random() < 0.25);
 
+    // Determine if Auto Pop reward should spawn (50% chance for non-mega jackpots)
+    const isAutoPopReward = !isMegaJackpot && (Math.random() < 0.5);
+
     // Handle mega jackpot differently
     if (isMegaJackpot) {
       // Stop any existing animations
@@ -1376,6 +1382,11 @@ export default class MainScene extends Phaser.Scene {
               this.createEnergyReward();
             });
           }
+        }
+
+        // 50% chance: ALSO spawn Auto Pop item
+        if (isAutoPopReward) {
+          this.createAutoPopReward();
         }
 
         // Start monitoring AFTER confetti exists to prevent race condition
@@ -1892,6 +1903,354 @@ export default class MainScene extends Phaser.Scene {
     });
   }
 
+  createAutoPopReward() {
+    // Get chest position
+    const chestX = this.player.x;
+    const chestY = this.player.y;
+
+    // Create single Auto Pop sprite with physics
+    const autoPop = this.physics.add.sprite(chestX, chestY, 'autopop_icon');
+
+    // Track this sprite for UI slide-in monitoring
+    this.activeConfettiSprites.add(autoPop);
+
+    // Set depth in front of sun (10), sparkles (5), and chest (20)
+    autoPop.setDepth(100);
+
+    // Larger scale for visibility (same size as emerald/energy)
+    const scale = 0.9;
+
+    // Set upward physics velocity with random height variation
+    const velocityX = Phaser.Math.Between(-200, 200); // Moderate horizontal drift
+    const velocityY = Phaser.Math.Between(-400, -1000); // Random height: low to very high
+    autoPop.setVelocity(velocityX, velocityY);
+
+    // Apply gravity for realistic arc
+    autoPop.setGravityY(900);
+
+    // Gentle spin for visual interest
+    autoPop.setAngularVelocity(180);
+
+    // Pop-in scale animation
+    autoPop.setScale(0);
+    this.tweens.add({
+      targets: autoPop,
+      scaleX: scale,
+      scaleY: scale,
+      duration: 150,
+      ease: 'Back.out',
+      onComplete: () => {
+        // Make it interactive AFTER pop-in completes
+        autoPop.setInteractive({ useHandCursor: true });
+
+        // Random zoom effect - 50% chance towards camera (bigger), 50% away (smaller)
+        const zoomTowards = Math.random() < 0.5;
+        const zoomMultiplier = zoomTowards
+          ? Phaser.Math.FloatBetween(1.5, 3.0)  // Zoom in: 1.5x to 3.0x
+          : Phaser.Math.FloatBetween(0.3, 0.6); // Zoom out: 0.3x to 0.6x
+
+        // If zooming away (getting smaller), move behind chest (depth 15)
+        if (!zoomTowards) {
+          autoPop.setDepth(15);
+        }
+
+        this.tweens.add({
+          targets: autoPop,
+          scaleX: scale * zoomMultiplier,
+          scaleY: scale * zoomMultiplier,
+          duration: 1000,
+          ease: 'Power2.easeIn',
+          delay: 200
+        });
+      }
+    });
+
+    // Click handler - activate Auto Pop
+    autoPop.on('pointerdown', () => {
+      // Prevent multiple clicks
+      autoPop.disableInteractive();
+
+      // Unlock audio if needed
+      if (!this.audioUnlocked) {
+        this.sound.context.resume().then(() => {
+          this.audioUnlocked = true;
+        }).catch(err => {
+          console.warn('Failed to unlock audio:', err);
+        });
+      }
+
+      // Play collection sound (reuse energy sound)
+      this.sound.play('energy_collect_sound');
+
+      // Trigger success haptic feedback
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+      }
+
+      // Start Auto Pop sequence
+      this.startAutoPopSequence();
+
+      // Bubble pop animation - scale up and fade out
+      this.tweens.add({
+        targets: autoPop,
+        scaleX: 1.5,
+        scaleY: 1.5,
+        alpha: 0,
+        angle: autoPop.angle + 180,
+        duration: 250,
+        ease: 'Back.easeIn',
+        onComplete: () => {
+          // Remove from tracking set and destroy
+          this.activeConfettiSprites.delete(autoPop);
+          autoPop.destroy();
+        }
+      });
+    });
+
+    // Pulsing warning fade before disappearing (same as energy/emerald)
+    this.time.delayedCall(2500, () => {
+      if (autoPop && autoPop.active) {
+        autoPop.disableInteractive();
+
+        // Three accelerating pulses before final fade
+        this.tweens.add({
+          targets: autoPop,
+          alpha: 0.3,
+          duration: 400,
+          ease: 'Sine.easeInOut',
+          yoyo: true,
+          onComplete: () => {
+            this.tweens.add({
+              targets: autoPop,
+              alpha: 0.3,
+              duration: 300,
+              ease: 'Sine.easeInOut',
+              yoyo: true,
+              onComplete: () => {
+                this.tweens.add({
+                  targets: autoPop,
+                  alpha: 0.3,
+                  duration: 200,
+                  ease: 'Sine.easeInOut',
+                  yoyo: true,
+                  onComplete: () => {
+                    this.tweens.add({
+                      targets: autoPop,
+                      alpha: 0,
+                      duration: 200,
+                      ease: 'Power2',
+                      onComplete: () => {
+                        this.activeConfettiSprites.delete(autoPop);
+                        autoPop.destroy();
+                      }
+                    });
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+    });
+  }
+
+  startAutoPopSequence() {
+    // If already auto-popping, add 10 to the existing counter
+    if (this.isAutoPopping && this.autoPopCountText) {
+      // Add 10 more pops to the queue
+      if (!this.autoPopPopsRemaining) {
+        this.autoPopPopsRemaining = 10;
+      }
+      this.autoPopPopsRemaining += 10;
+
+      // Update the text immediately to show new total
+      this.autoPopCountText.setText(`Auto Pop ${this.autoPopPopsRemaining}`);
+
+      // Flash the text to indicate addition
+      this.tweens.add({
+        targets: this.autoPopCountText,
+        scaleX: 1.5,
+        scaleY: 1.5,
+        duration: 150,
+        ease: 'Back.out',
+        yoyo: true
+      });
+
+      return; // Don't start a new sequence
+    }
+
+    // Store original energy value to restore after sequence
+    const originalEnergy = this.batteryState.get();
+
+    // Set flag to prevent manual chest clicks
+    this.isAutoPopping = true;
+
+    // Disable chest interactivity
+    this.player.disableInteractive();
+
+    // Create countdown text at top of screen
+    const centerX = this.cameras.main.width / 2;
+    const topY = 120; // Below status bar
+
+    this.autoPopCountText = this.add.text(centerX, topY, 'Auto Pop 10', {
+      fontFamily: 'Tilt Warp',
+      fontSize: '48px',
+      fill: '#FFD700', // Gold color
+      stroke: '#000000',
+      strokeThickness: 6,
+      padding: { x: 20, y: 20 },
+      resolution: 2
+    }).setOrigin(0.5).setDepth(3000); // Above everything
+
+    // Pulsing animation for countdown text
+    this.tweens.add({
+      targets: this.autoPopCountText,
+      scaleX: 1.15,
+      scaleY: 1.15,
+      duration: 300,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1
+    });
+
+    // Auto-pop loop: starts at 10, but can increase if more Auto Pops are clicked
+    this.autoPopPopsRemaining = 10;
+
+    const autoPopTimer = this.time.addEvent({
+      delay: 200, // 200ms between each pop
+      callback: () => {
+        // Update countdown text
+        this.autoPopCountText.setText(`Auto Pop ${this.autoPopPopsRemaining}`);
+
+        // Call openChest() but bypass energy consumption
+        this.openChestAutoPop();
+
+        this.autoPopPopsRemaining--;
+
+        // Check if sequence complete
+        if (this.autoPopPopsRemaining <= 0) {
+          autoPopTimer.remove();
+
+          // Wait 500ms before cleanup
+          this.time.delayedCall(500, () => {
+            // Restore energy (no net consumption during auto-pop)
+            this.batteryState.set(originalEnergy);
+            this.statusBar.setResource('energy', originalEnergy, true);
+
+            // Fade out and remove countdown text
+            this.tweens.add({
+              targets: this.autoPopCountText,
+              alpha: 0,
+              duration: 300,
+              onComplete: () => {
+                this.autoPopCountText.destroy();
+                this.autoPopCountText = null;
+              }
+            });
+
+            // Re-enable chest clicking
+            this.isAutoPopping = false;
+            this.autoPopPopsRemaining = 0;
+            this.player.setInteractive({ useHandCursor: true });
+          });
+        }
+      },
+      loop: true
+    });
+  }
+
+  openChestAutoPop() {
+    // This is a modified version of openChest() that:
+    // 1. Does NOT consume energy
+    // 2. CAN spawn emerald, energy, and Auto Pop rewards (same as normal gameplay)
+
+    // Record click time for battery regeneration logic
+    this.lastClickTime = this.time.now;
+
+    // Slide UI out (same as normal)
+    this.slideUIOut();
+
+    // Trigger haptic feedback
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+    }
+
+    // NOTE: Energy is NOT consumed here (skip energy decrease)
+
+    // Increment total chests opened counter (for stats tracking)
+    const chestsOpened = this.totalChestsOpenedState.get();
+    this.totalChestsOpenedState.set(chestsOpened + 1);
+
+    // Determine payout size (same probability as normal)
+    const rand = Math.random();
+    let coinReward, isBigPayout = false;
+
+    // NOTE: Mega jackpot disabled during auto-pop (too disruptive)
+    if (rand < 0.20) {
+      // 20% big payout
+      isBigPayout = true;
+      coinReward = Phaser.Utils.Array.GetRandom([50, 75, 100, 125, 150]);
+    } else {
+      // 80% normal payout
+      coinReward = Phaser.Math.Between(3, 49);
+    }
+
+    // Determine if emerald reward should spawn (10% chance)
+    const isEmeraldReward = Math.random() < 0.1;
+
+    // Determine if energy reward should spawn (25% chance)
+    const isEnergyReward = Math.random() < 0.25;
+
+    // Determine if Auto Pop reward should spawn (50% chance)
+    const isAutoPopReward = Math.random() < 0.5;
+
+    // Play chest sound
+    this.sound.play(isBigPayout ? 'chest_sound' : 'chest_sound_big');
+
+    // Play chest opening animation
+    this.player.play('chest_open', true);
+
+    // Trigger reward after 300ms delay
+    this.time.delayedCall(300, () => {
+      // Always spawn coin confetti
+      this.createCoinConfetti(coinReward, isBigPayout);
+
+      // 10% chance: ALSO spawn emerald
+      if (isEmeraldReward) {
+        this.createEmeraldReward();
+      }
+
+      // 25% chance: ALSO spawn energy (1-3 items randomly)
+      if (isEnergyReward) {
+        const energyCount = Phaser.Math.Between(1, 3);
+        for (let i = 0; i < energyCount; i++) {
+          // Stagger spawns slightly for better visual effect
+          this.time.delayedCall(i * 50, () => {
+            this.createEnergyReward();
+          });
+        }
+      }
+
+      // 50% chance: ALSO spawn Auto Pop item
+      if (isAutoPopReward) {
+        this.createAutoPopReward();
+      }
+
+      // Start monitoring for UI slide back
+      this.startUISlideBackMonitoring();
+    });
+
+    // Play closing animation
+    this.time.delayedCall(500, () => {
+      this.player.play('chest_close', true);
+    });
+
+    // Save stats after every 3rd auto-pop to reduce database load
+    if (this.totalChestsOpenedState.get() % 3 === 0) {
+      this.saveStatsToSupabase();
+    }
+  }
+
   /**
    * Handle specialty item click for combo tracking
    *
@@ -1909,8 +2268,8 @@ export default class MainScene extends Phaser.Scene {
    * @param {number} rewardAmount - Amount to give (usually 1)
    */
   handleSpecialtyItemClick(itemType, rewardAmount) {
-    // Skip combo tracking during mega jackpot
-    if (this.isJackpotPlaying) {
+    // Skip combo tracking during mega jackpot or auto-pop
+    if (this.isJackpotPlaying || this.isAutoPopping) {
       return;
     }
 
