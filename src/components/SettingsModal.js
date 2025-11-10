@@ -86,28 +86,36 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.panel.setTint(0xf5f5f5); // Light gray tint for better contrast
     this.add(this.panel);
 
-    // Header ribbon - smaller scale
-    this.headerRibbon = this.scene.add.image(
+    // Header ribbon - using NineSlice to stretch the center
+    // Original image: 406×157px
+    // Add 80px to original width: 406 + 80 = 486px, then scale by 0.45
+    this.headerRibbon = this.scene.add.nineslice(
       centerX,
-      centerY - this.modalHeight / 2 + 35,
-      'settings_header_ribbon'
+      centerY - this.modalHeight / 2 + 10,
+      'settings_header_ribbon',
+      null,
+      486,  // Target width: 80px wider than original
+      157,  // Original height
+      100, 100, 30, 30  // Left, right, top, bottom slices (preserve ribbon ends)
     );
+    this.headerRibbon.setOrigin(0.5);
     this.headerRibbon.setScale(0.45);
     this.add(this.headerRibbon);
 
     // "SETTINGS" text - much smaller
     this.headerText = this.scene.add.text(
       centerX,
-      centerY - this.modalHeight / 2 + 35,
+      centerY - this.modalHeight / 2 + 0,
       'SETTINGS',
       {
         fontFamily: 'Tilt Warp',
-        fontSize: '22px',
+        fontSize: '32px',
         fill: '#FFFFFF',
         stroke: '#000000',
-        strokeThickness: 4,
+        strokeThickness: 5,
         padding: { x: 15, y: 15 },
         resolution: 2
+       // resolution: window.devicePixelRatio // key change
       }
     );
     this.headerText.setOrigin(0.5);
@@ -120,11 +128,11 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
 
     // Close button - smaller and better positioned
     this.closeButton = this.scene.add.image(
-      centerX + this.modalWidth / 2 - 35,
-      centerY - this.modalHeight / 2 + 35,
+      centerX + this.modalWidth / 2 - 10,
+      centerY - this.modalHeight / 2 + 10,
       'settings_close_btn'
     );
-    this.closeButton.setScale(0.5);
+    this.closeButton.setScale(0.2);
     this.closeButton.setInteractive({ useHandCursor: true });
     this.add(this.closeButton);
 
@@ -290,7 +298,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
    */
   createToggleRow(x, y, labelText, iconKey, initialState, onToggle) {
     // Label text - moved to the right
-    const label = this.scene.add.text(x - 160, y, labelText, {
+    const label = this.scene.add.text(x - 150, y, labelText, {
       fontFamily: 'LINESeed',
       fontSize: '16px',
       fill: '#3a4a5a',
@@ -301,7 +309,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.add(label);
 
     // Icon - positioned closer to toggle
-    const icon = this.scene.add.image(x + 40, y, iconKey);
+    const icon = this.scene.add.image(x + 25, y, iconKey);
     icon.setScale(0.45);
     this.add(icon);
 
@@ -374,7 +382,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
   setupInteractivity() {
     // Close button
     this.closeButton.on('pointerdown', () => {
-      this.closeButton.setScale(0.45);
+      this.closeButton.setScale(0.18);
 
       // Haptic feedback
       if (this.hapticEnabledState.get() && window.Telegram?.WebApp?.HapticFeedback) {
@@ -383,7 +391,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     });
 
     this.closeButton.on('pointerup', () => {
-      this.closeButton.setScale(0.5);
+      this.closeButton.setScale(0.2);
 
       // Play button sound (same as BottomTabMenu and settings gear)
       if (this.scene.sound) {

@@ -110,7 +110,7 @@ export default class LoadingScene extends Phaser.Scene {
     // Settings modal assets
     loader.image('settings_modal_bg', '/assets/Components/Popup/popup02_White1.png');
     loader.image('settings_header_ribbon', '/assets/Components/Label/Label_Ribbon01_Blue.png');
-    loader.image('settings_close_btn', '/assets/Components/IconMisc/Icon_Colse02.Png');
+    loader.image('settings_close_btn', '/assets/Components/IconMisc/close_x_2.webp');
     loader.image('settings_sound_icon', '/assets/Components/IconMisc/Icon_Sound.png');
     loader.image('settings_haptic_icon', '/assets/Components/IconMisc/Icon_Bell.png');
     loader.image('toggle_bg_on', '/assets/Components/UI_Etc/Switch01_Demo_Bg_On.Png');
