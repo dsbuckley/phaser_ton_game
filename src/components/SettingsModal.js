@@ -487,14 +487,24 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       overlayDiv.remove();
     }
 
+    // Calculate offset to animate back to upper-right corner
+    const scaleChange = 1 - 0.8; // 0.2
+    const endOffsetX = this.scene.scale.width * scaleChange;
+    const endOffsetY = 0;
+
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
       scale: 0.8,
+      x: endOffsetX,
+      y: endOffsetY,
       duration: 200,
       ease: 'Cubic.in',
       onComplete: () => {
         this.setVisible(false);
+        // Reset position back to 0,0 for next show
+        this.x = 0;
+        this.y = 0;
       }
     });
 
