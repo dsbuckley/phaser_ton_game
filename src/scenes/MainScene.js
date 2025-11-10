@@ -2117,7 +2117,7 @@ export default class MainScene extends Phaser.Scene {
     this.autoPopPopsRemaining = 10;
 
     const autoPopTimer = this.time.addEvent({
-      delay: 200, // 200ms between each pop
+      delay: 300, // 300ms between each pop
       callback: () => {
         // Update countdown text
         this.autoPopCountText.setText(`Auto Pop ${this.autoPopPopsRemaining}`);
@@ -2201,8 +2201,8 @@ export default class MainScene extends Phaser.Scene {
     // Determine if energy reward should spawn (25% chance)
     const isEnergyReward = Math.random() < 0.25;
 
-    // Determine if Auto Pop reward should spawn (50% chance)
-    const isAutoPopReward = Math.random() < 0.5;
+    // Auto Pop rewards do NOT spawn during auto-pop sequences (prevents chaos)
+    const isAutoPopReward = false;
 
     // Play chest sound
     this.sound.play(isBigPayout ? 'chest_sound' : 'chest_sound_big');
