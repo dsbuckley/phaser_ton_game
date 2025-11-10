@@ -1894,6 +1894,17 @@ export default class MainScene extends Phaser.Scene {
 
   /**
    * Handle specialty item click for combo tracking
+   *
+   * IMPORTANT: Combos work ACROSS multiple chest opens!
+   * Example: Open chest 3 times quickly:
+   *   - Chest 1 spawns 1 energy → click it
+   *   - Chest 2 spawns 2 energies → click both within 350ms
+   *   - Chest 3 spawns 2 energies → click both within 350ms
+   * Result: 5x combo = +3 bonus energy (floor(5/3) * 3)
+   *
+   * The 350ms window only cares about time between specialty item clicks,
+   * NOT about which chest they came from.
+   *
    * @param {string} itemType - 'energy' or 'gems'
    * @param {number} rewardAmount - Amount to give (usually 1)
    */
@@ -1902,7 +1913,7 @@ export default class MainScene extends Phaser.Scene {
     const timeSinceLastClick = now - this.comboTracker.lastClickTime;
 
     // Check if this is the same item type within 350ms window
-    if (this.comboTracker.itemType === itemType && timeSinceLastClick <= 350) {
+    if (this.comboTracker.itemType === itemType && timeSinceLastClick <= 500) {
       // Continue combo: increment count and store reward
       this.comboTracker.count++;
       this.comboTracker.pendingRewards.push(rewardAmount);
@@ -1928,7 +1939,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Start new 350ms timer to finalize combo if no more clicks
-    this.comboTimer = this.time.delayedCall(350, () => {
+    this.comboTimer = this.time.delayedCall(500, () => {
       this.finalizeCombo();
     });
   }
