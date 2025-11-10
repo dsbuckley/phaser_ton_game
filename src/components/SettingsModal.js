@@ -425,7 +425,12 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     // Add black overlay to HTML avatar (if it exists)
     const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
     if (avatarOverlay && avatarOverlay.querySelector('img')) {
-      // Add a ::before pseudo-element style via inline element
+      // Store original border color
+      avatarOverlay.dataset.originalBorder = avatarOverlay.style.border;
+      // Darken the white border to match the overlay
+      avatarOverlay.style.border = '2px solid rgba(255, 255, 255, 0.3)';
+
+      // Add a black overlay div
       const overlayDiv = document.createElement('div');
       overlayDiv.id = 'avatar-modal-overlay';
       overlayDiv.style.position = 'absolute';
@@ -459,7 +464,13 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
    * Hide the modal with animation
    */
   hide() {
-    // Remove the black overlay from HTML avatar
+    // Remove the black overlay from HTML avatar and restore border
+    const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
+    if (avatarOverlay && avatarOverlay.dataset.originalBorder) {
+      avatarOverlay.style.border = avatarOverlay.dataset.originalBorder;
+      delete avatarOverlay.dataset.originalBorder;
+    }
+
     const overlayDiv = document.getElementById('avatar-modal-overlay');
     if (overlayDiv) {
       overlayDiv.remove();
