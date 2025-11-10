@@ -422,6 +422,12 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.setAlpha(0);
     this.setScale(0.8);
 
+    // Dim the HTML avatar overlay (if it exists)
+    const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
+    if (avatarOverlay && avatarOverlay.querySelector('img')) {
+      avatarOverlay.style.opacity = '0.3';
+    }
+
     // Fade in overlay
     this.scene.tweens.add({
       targets: this,
@@ -441,6 +447,12 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
    * Hide the modal with animation
    */
   hide() {
+    // Restore the HTML avatar overlay opacity
+    const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
+    if (avatarOverlay && avatarOverlay.querySelector('img')) {
+      avatarOverlay.style.opacity = '1';
+    }
+
     this.scene.tweens.add({
       targets: this,
       alpha: 0,
