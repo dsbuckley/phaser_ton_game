@@ -1336,7 +1336,7 @@ export default class MainScene extends Phaser.Scene {
     const isEnergyReward = !isMegaJackpot && (Math.random() < 0.25);
 
     // Determine if Auto Pop reward should spawn (5% chance for non-mega jackpots)
-    const isAutoPopReward = !isMegaJackpot && (Math.random() < 0.95);
+    const isAutoPopReward = !isMegaJackpot && (Math.random() < 0.05);
 
     // Handle mega jackpot differently
     if (isMegaJackpot) {
