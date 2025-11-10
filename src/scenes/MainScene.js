@@ -1336,7 +1336,7 @@ export default class MainScene extends Phaser.Scene {
     const isEnergyReward = !isMegaJackpot && (Math.random() < 0.25);
 
     // Determine if Auto Pop reward should spawn (5% chance for non-mega jackpots)
-    const isAutoPopReward = !isMegaJackpot && (Math.random() < 0.05);
+    const isAutoPopReward = !isMegaJackpot && (Math.random() < 0.95);
 
     // Handle mega jackpot differently
     if (isMegaJackpot) {
@@ -2090,23 +2090,62 @@ export default class MainScene extends Phaser.Scene {
 
     // Create countdown text at top of screen
     const centerX = this.cameras.main.width / 2;
-    const topY = 105; // Below status bar (moved up 15px)
+    const topY = 75; // Closer to the top
+
+    // Create spinning light in front of text
+    this.autoPopLight = this.add.image(centerX, topY, 'jackpot_light')
+      .setOrigin(0.5)
+      .setDepth(3001) // In front of text (3000)
+      .setScale(1.0); // Full size
+
+    // Rotating animation for light
+    this.tweens.add({
+      targets: this.autoPopLight,
+      angle: 360,
+      duration: 2000, // 2 seconds per rotation
+      ease: 'Linear',
+      repeat: -1
+    });
 
     this.autoPopCountText = this.add.text(centerX, topY, 'Auto Pop 10', {
       fontFamily: 'Tilt Warp',
-      fontSize: '48px',
-      fill: '#FFD700', // Gold color
+      fontSize: '32px', // Smaller font size
+      fill: '#FF0000', // Start with red (will cycle through rainbow)
       stroke: '#000000',
-      strokeThickness: 6,
+      strokeThickness: 4,
       padding: { x: 20, y: 20 },
       resolution: 2
     }).setOrigin(0.5).setDepth(3000); // Above everything
 
-    // Pulsing animation for countdown text
+    // Rainbow color animation (ROYGBIV)
+    const rainbowColors = [
+      '#FF0000', // Red
+      '#FF7F00', // Orange
+      '#FFFF00', // Yellow
+      '#00FF00', // Green
+      '#0000FF', // Blue
+      '#4B0082', // Indigo
+      '#9400D3'  // Violet
+    ];
+
+    // Create color cycling timeline
+    let colorIndex = 0;
+    this.autoPopColorTimer = this.time.addEvent({
+      delay: 150, // Change color every 150ms
+      callback: () => {
+        if (this.autoPopCountText && this.autoPopCountText.active) {
+          colorIndex = (colorIndex + 1) % rainbowColors.length;
+          this.autoPopCountText.setColor(rainbowColors[colorIndex]);
+        }
+      },
+      loop: true
+    });
+
+    // Pulsing animation for countdown text (subtle now)
     this.tweens.add({
       targets: this.autoPopCountText,
-      scaleX: 1.15,
-      scaleY: 1.15,
+      scaleX: 1.1,
+      scaleY: 1.1,
       duration: 300,
       ease: 'Sine.easeInOut',
       yoyo: true,
@@ -2137,14 +2176,25 @@ export default class MainScene extends Phaser.Scene {
             this.batteryState.set(originalEnergy);
             this.statusBar.setResource('energy', originalEnergy, true);
 
-            // Fade out and remove countdown text
+            // Stop rainbow color timer
+            if (this.autoPopColorTimer) {
+              this.autoPopColorTimer.remove();
+              this.autoPopColorTimer = null;
+            }
+
+            // Fade out and remove countdown text and light
             this.tweens.add({
-              targets: this.autoPopCountText,
+              targets: [this.autoPopCountText, this.autoPopLight],
               alpha: 0,
               duration: 300,
               onComplete: () => {
                 this.autoPopCountText.destroy();
                 this.autoPopCountText = null;
+
+                if (this.autoPopLight) {
+                  this.autoPopLight.destroy();
+                  this.autoPopLight = null;
+                }
               }
             });
 
