@@ -114,8 +114,8 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
         stroke: '#000000',
         strokeThickness: 5,
         padding: { x: 15, y: 15 },
-        resolution: 2
-       // resolution: window.devicePixelRatio // key change
+        // resolution: 2
+       resolution: window.devicePixelRatio // key change
       }
     );
     this.headerText.setOrigin(0.5);

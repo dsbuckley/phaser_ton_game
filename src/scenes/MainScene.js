@@ -1335,8 +1335,8 @@ export default class MainScene extends Phaser.Scene {
     // Determine if energy reward should spawn (25% chance for non-mega jackpots)
     const isEnergyReward = !isMegaJackpot && (Math.random() < 0.25);
 
-    // Determine if Auto Pop reward should spawn (50% chance for non-mega jackpots)
-    const isAutoPopReward = !isMegaJackpot && (Math.random() < 0.5);
+    // Determine if Auto Pop reward should spawn (5% chance for non-mega jackpots)
+    const isAutoPopReward = !isMegaJackpot && (Math.random() < 0.05);
 
     // Handle mega jackpot differently
     if (isMegaJackpot) {
@@ -2090,7 +2090,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Create countdown text at top of screen
     const centerX = this.cameras.main.width / 2;
-    const topY = 120; // Below status bar
+    const topY = 105; // Below status bar (moved up 15px)
 
     this.autoPopCountText = this.add.text(centerX, topY, 'Auto Pop 10', {
       fontFamily: 'Tilt Warp',
