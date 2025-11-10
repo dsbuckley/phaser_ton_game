@@ -2318,8 +2318,8 @@ export default class MainScene extends Phaser.Scene {
    * @param {number} rewardAmount - Amount to give (usually 1)
    */
   handleSpecialtyItemClick(itemType, rewardAmount) {
-    // Skip combo tracking during mega jackpot or auto-pop
-    if (this.isJackpotPlaying || this.isAutoPopping) {
+    // Skip combo tracking during mega jackpot only (combos work during auto-pop!)
+    if (this.isJackpotPlaying) {
       return;
     }
 
