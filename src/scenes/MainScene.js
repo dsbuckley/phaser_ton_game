@@ -1918,7 +1918,7 @@ export default class MainScene extends Phaser.Scene {
     const timeSinceLastClick = now - this.comboTracker.lastClickTime;
 
     // Check if this is the same item type within 350ms window
-    if (this.comboTracker.itemType === itemType && timeSinceLastClick <= 500) {
+    if (this.comboTracker.itemType === itemType && timeSinceLastClick <= 600) {
       // Continue combo: increment count and store reward
       this.comboTracker.count++;
       this.comboTracker.pendingRewards.push(rewardAmount);
@@ -1944,7 +1944,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Start new 350ms timer to finalize combo if no more clicks
-    this.comboTimer = this.time.delayedCall(500, () => {
+    this.comboTimer = this.time.delayedCall(600, () => {
       this.finalizeCombo();
     });
   }
