@@ -6,6 +6,7 @@ import StatusBar from '../components/StatusBar.js';
 import BottomTabMenu from '../components/BottomTabMenu.js';
 import EnergyCountdownTimer from '../components/EnergyCountdownTimer.js';
 import SettingsModal from '../components/SettingsModal.js';
+import ComboBonusDisplay from '../components/ComboBonusDisplay.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -21,6 +22,15 @@ export default class MainScene extends Phaser.Scene {
     this.isJackpotPlaying = false;
     this.activeConfettiSprites = new Set(); // Track active confetti sprites
     this.uiSlideCheckTimer = null; // Timer for checking when to slide UI back in
+
+    // Combo tracking state
+    this.comboTracker = {
+      itemType: null,        // 'energy' or 'gems'
+      count: 0,              // Number of consecutive clicks
+      lastClickTime: 0,      // Timestamp of last click
+      pendingRewards: []     // Array of reward amounts to apply
+    };
+    this.comboTimer = null;  // Reference to 350ms delayed event
   }
 
   async create() {
@@ -1575,6 +1585,9 @@ export default class MainScene extends Phaser.Scene {
         });
       }
 
+      // Track combo BEFORE applying rewards
+      this.handleSpecialtyItemClick('gems', 1);
+
       // Play emerald collection sound
       this.sound.play('emerald_sound');
 
@@ -1760,6 +1773,9 @@ export default class MainScene extends Phaser.Scene {
         });
       }
 
+      // Track combo BEFORE applying rewards
+      this.handleSpecialtyItemClick('energy', 1);
+
       // Play energy collection sound
       this.sound.play('energy_collect_sound');
 
@@ -1874,6 +1890,138 @@ export default class MainScene extends Phaser.Scene {
         });
       }
     });
+  }
+
+  /**
+   * Handle specialty item click for combo tracking
+   * @param {string} itemType - 'energy' or 'gems'
+   * @param {number} rewardAmount - Amount to give (usually 1)
+   */
+  handleSpecialtyItemClick(itemType, rewardAmount) {
+    const now = this.time.now;
+    const timeSinceLastClick = now - this.comboTracker.lastClickTime;
+
+    // Check if this is the same item type within 350ms window
+    if (this.comboTracker.itemType === itemType && timeSinceLastClick <= 350) {
+      // Continue combo: increment count and store reward
+      this.comboTracker.count++;
+      this.comboTracker.pendingRewards.push(rewardAmount);
+      this.comboTracker.lastClickTime = now;
+
+      console.log(`🔥 Combo continued: ${itemType} x${this.comboTracker.count}`);
+    } else {
+      // Different item type or window expired: finalize previous combo
+      this.finalizeCombo();
+
+      // Start new combo tracking
+      this.comboTracker.itemType = itemType;
+      this.comboTracker.count = 1;
+      this.comboTracker.lastClickTime = now;
+      this.comboTracker.pendingRewards = [rewardAmount];
+
+      console.log(`✨ New combo started: ${itemType}`);
+    }
+
+    // Clear existing combo timer
+    if (this.comboTimer) {
+      this.comboTimer.remove();
+    }
+
+    // Start new 350ms timer to finalize combo if no more clicks
+    this.comboTimer = this.time.delayedCall(350, () => {
+      this.finalizeCombo();
+    });
+  }
+
+  /**
+   * Finalize the current combo and apply rewards
+   */
+  finalizeCombo() {
+    // Check if there's a combo to finalize
+    if (this.comboTracker.count === 0) {
+      return;
+    }
+
+    const totalCount = this.comboTracker.count;
+    const itemType = this.comboTracker.itemType;
+    const pendingRewards = this.comboTracker.pendingRewards;
+
+    // Calculate total base rewards
+    const totalBaseRewards = pendingRewards.reduce((sum, amount) => sum + amount, 0);
+
+    // Check if combo qualifies (3 or more)
+    if (totalCount >= 3) {
+      // Calculate bonus: floor(count / 3) * 3
+      const bonusAmount = Math.floor(totalCount / 3) * 3;
+
+      console.log(`🎉 COMBO BONUS! ${itemType} x${totalCount} = +${bonusAmount} bonus`);
+
+      // Apply base rewards + bonus
+      this.applyComboRewards(itemType, totalBaseRewards, bonusAmount);
+    } else {
+      // No combo: apply base rewards only (already applied in click handler, so do nothing)
+      console.log(`No combo: ${itemType} x${totalCount} (need 3+)`);
+    }
+
+    // Reset combo tracker
+    this.resetComboTracker();
+  }
+
+  /**
+   * Apply combo rewards and show UI
+   * @param {string} itemType - 'energy' or 'gems'
+   * @param {number} baseAmount - Base rewards already applied
+   * @param {number} bonusAmount - Bonus rewards to apply
+   */
+  applyComboRewards(itemType, baseAmount, bonusAmount) {
+    // Apply bonus rewards based on item type
+    if (itemType === 'energy') {
+      const currentEnergy = this.batteryState.get();
+      const newEnergy = currentEnergy + bonusAmount;
+      this.batteryState.set(newEnergy);
+      this.statusBar.setResource('energy', newEnergy, true);
+    } else if (itemType === 'gems') {
+      const currentGems = this.gemsState.get();
+      const newGems = currentGems + bonusAmount;
+      this.gemsState.set(newGems);
+      this.statusBar.setResource('gems', newGems, true);
+    }
+
+    // Show combo bonus UI
+    const centerX = this.cameras.main.width / 2;
+    const centerY = this.cameras.main.height / 2;
+
+    const comboBonusDisplay = new ComboBonusDisplay(this, centerX, centerY, {
+      itemType: itemType,
+      bonusAmount: bonusAmount
+    });
+    this.add.existing(comboBonusDisplay);
+    comboBonusDisplay.setScrollFactor(0).setDepth(3000); // Top layer
+
+    // Play sound effect (reuse existing collect sound)
+    if (itemType === 'energy') {
+      this.sound.play('energy_collect_sound');
+    } else if (itemType === 'gems') {
+      this.sound.play('emerald_sound');
+    }
+
+    // Trigger haptic feedback
+    if (window.Telegram?.WebApp?.HapticFeedback) {
+      window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+    }
+
+    // Save stats immediately after combo bonus
+    this.saveStatsToSupabase();
+  }
+
+  /**
+   * Reset combo tracker to initial state
+   */
+  resetComboTracker() {
+    this.comboTracker.itemType = null;
+    this.comboTracker.count = 0;
+    this.comboTracker.lastClickTime = 0;
+    this.comboTracker.pendingRewards = [];
   }
 
   streamMegaJackpotCoins(totalAmount) {
