@@ -88,13 +88,13 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
 
     // Header ribbon - using NineSlice to stretch the center
     // Original image: 406×157px
-    // Add 80px to original width: 406 + 80 = 486px, then scale by 0.45
+    // Add 130px to original width: 406 + 130 = 536px, then scale by 0.45
     this.headerRibbon = this.scene.add.nineslice(
       centerX,
-      centerY - this.modalHeight / 2 + 10,
+      centerY - this.modalHeight / 2 - 10,
       'settings_header_ribbon',
       null,
-      486,  // Target width: 80px wider than original
+      650,  // Target width: 130px wider than original
       157,  // Original height
       100, 100, 30, 30  // Left, right, top, bottom slices (preserve ribbon ends)
     );
@@ -105,7 +105,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     // "SETTINGS" text - much smaller
     this.headerText = this.scene.add.text(
       centerX,
-      centerY - this.modalHeight / 2 + 0,
+      centerY - this.modalHeight / 2 - 20,
       'SETTINGS',
       {
         fontFamily: 'Tilt Warp',
@@ -422,6 +422,15 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.setAlpha(0);
     this.setScale(0.8);
 
+    // Calculate offset to simulate upper-right origin
+    // When scaling from 0.8 to 1, we need to shift position to keep upper-right fixed
+    const scaleChange = 1 - 0.8; // 0.2
+    const startOffsetX = this.scene.scale.width * scaleChange;
+    const startOffsetY = 0;
+
+    this.x = startOffsetX;
+    this.y = startOffsetY;
+
     // Add black overlay to HTML avatar (if it exists)
     const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
     if (avatarOverlay && avatarOverlay.querySelector('img')) {
@@ -445,11 +454,13 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       avatarOverlay.appendChild(overlayDiv);
     }
 
-    // Fade in overlay
+    // Fade in overlay with position animation to simulate upper-right origin
     this.scene.tweens.add({
       targets: this,
       alpha: 1,
       scale: 1,
+      x: 0,
+      y: 0,
       duration: 300,
       ease: 'Back.out'
     });
