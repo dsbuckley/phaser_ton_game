@@ -2021,6 +2021,9 @@ export default class MainScene extends Phaser.Scene {
       this.sound.play('emerald_sound');
     }
 
+    // Play combo sound effect
+    this.sound.play('combo_sound');
+
     // Trigger haptic feedback
     if (window.Telegram?.WebApp?.HapticFeedback) {
       window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
