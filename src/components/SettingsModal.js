@@ -72,6 +72,11 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.overlay.setInteractive({ useHandCursor: false });
     this.add(this.overlay);
 
+    // Create a separate container for modal content (everything except overlay)
+    // This allows us to animate the modal while keeping overlay static
+    this.modalContent = this.scene.add.container(0, 0);
+    this.add(this.modalContent);
+
     // Modal panel background (NineSlice) - with slight tint for better visibility
     this.panel = this.scene.add.nineslice(
       centerX,
@@ -84,7 +89,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     );
     this.panel.setOrigin(0.5);
     this.panel.setTint(0xf5f5f5); // Light gray tint for better contrast
-    this.add(this.panel);
+    this.modalContent.add(this.panel);
 
     // Header ribbon - using NineSlice to stretch the center
     // Original image: 406×157px
@@ -100,7 +105,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     );
     this.headerRibbon.setOrigin(0.5);
     this.headerRibbon.setScale(0.45);
-    this.add(this.headerRibbon);
+    this.modalContent.add(this.headerRibbon);
 
     // "SETTINGS" text - much smaller
     this.headerText = this.scene.add.text(
@@ -119,7 +124,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       }
     );
     this.headerText.setOrigin(0.5);
-    this.add(this.headerText);
+    this.modalContent.add(this.headerText);
 
     // Reset Stats button (only for dev user ID 253305963)
     if (this.showResetButton) {
@@ -135,7 +140,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     this.closeButton.setScale(0.2);
     this.closeButton.setInteractive({ useHandCursor: true });
     this.closeButton.setScrollFactor(0); // Keep fixed on screen
-    this.add(this.closeButton);
+    this.modalContent.add(this.closeButton);
 
     // Sound toggle row - more spacing from header
     this.createToggleRow(
@@ -172,7 +177,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     const buttonBg = this.scene.add.rectangle(x, y, 140, 35, 0xff4444); // Red background
     buttonBg.setStrokeStyle(2, 0x000000); // Black border
     buttonBg.setInteractive({ useHandCursor: true });
-    this.add(buttonBg);
+    this.modalContent.add(buttonBg);
 
     // Create button text
     const buttonText = this.scene.add.text(x, y, 'Reset Stats', {
@@ -183,7 +188,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       resolution: 2
     });
     buttonText.setOrigin(0.5);
-    this.add(buttonText);
+    this.modalContent.add(buttonText);
 
     // Store references
     this.resetButton = buttonBg;
@@ -307,12 +312,12 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       resolution: 2
     });
     label.setOrigin(0, 0.5);
-    this.add(label);
+    this.modalContent.add(label);
 
     // Icon - positioned closer to toggle
     const icon = this.scene.add.image(x + 25, y, iconKey);
     icon.setScale(0.45);
-    this.add(icon);
+    this.modalContent.add(icon);
 
     // Toggle container position
     const toggleX = x + 95;
@@ -331,7 +336,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     );
     toggleBg.setOrigin(0.5);
     toggleBg.setScale(0.45);  // Scale down more
-    this.add(toggleBg);
+    this.modalContent.add(toggleBg);
 
     // Toggle switch button inside container
     // Calculate slide range: button moves left/right within the background
@@ -344,7 +349,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       initialState ? 'toggle_button_on' : 'toggle_button_off'
     );
     toggleSwitch.setScale(0.32);
-    this.add(toggleSwitch);
+    this.modalContent.add(toggleSwitch);
 
     // Make entire container interactive
     toggleBg.setInteractive({ useHandCursor: true });
@@ -419,8 +424,9 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
    */
   show() {
     this.setVisible(true);
-    this.setAlpha(0);
-    this.setScale(0.8);
+
+    // Start modal content at scaled-down size for animation
+    this.modalContent.setScale(0.8);
 
     // Calculate offset to simulate upper-right origin
     // When scaling from 0.8 to 1, we need to shift position to keep upper-right fixed
@@ -428,8 +434,8 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     const startOffsetX = this.scene.scale.width * scaleChange;
     const startOffsetY = 0;
 
-    this.x = startOffsetX;
-    this.y = startOffsetY;
+    this.modalContent.x = startOffsetX;
+    this.modalContent.y = startOffsetY;
 
     // Add black overlay to HTML avatar (if it exists)
     const avatarOverlay = document.querySelector('div[style*="position: absolute"]');
@@ -454,10 +460,9 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       avatarOverlay.appendChild(overlayDiv);
     }
 
-    // Fade in overlay with position animation to simulate upper-right origin
+    // Animate only the modal content (not the overlay) from upper-right
     this.scene.tweens.add({
-      targets: this,
-      alpha: 1,
+      targets: this.modalContent,
       scale: 1,
       x: 0,
       y: 0,
@@ -492,9 +497,17 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
     const endOffsetX = this.scene.scale.width * scaleChange;
     const endOffsetY = 0;
 
+    // Fade out overlay immediately
     this.scene.tweens.add({
-      targets: this,
+      targets: this.overlay,
       alpha: 0,
+      duration: 200,
+      ease: 'Cubic.in'
+    });
+
+    // Animate modal content back to upper-right
+    this.scene.tweens.add({
+      targets: this.modalContent,
       scale: 0.8,
       x: endOffsetX,
       y: endOffsetY,
@@ -502,9 +515,10 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       ease: 'Cubic.in',
       onComplete: () => {
         this.setVisible(false);
-        // Reset position back to 0,0 for next show
-        this.x = 0;
-        this.y = 0;
+        // Reset position and alpha back to defaults for next show
+        this.modalContent.x = 0;
+        this.modalContent.y = 0;
+        this.overlay.setAlpha(0.7);
       }
     });
 
