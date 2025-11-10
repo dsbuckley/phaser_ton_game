@@ -126,14 +126,15 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       this.createResetButton(centerX, centerY - this.modalHeight / 2 + 95);
     }
 
-    // Close button - smaller and better positioned
+    // Close button - positioned in upper-right corner of screen
     this.closeButton = this.scene.add.image(
-      centerX + this.modalWidth / 2 - 10,
-      centerY - this.modalHeight / 2 + 10,
+      this.scene.scale.width - 30,
+      30,
       'settings_close_btn'
     );
     this.closeButton.setScale(0.2);
     this.closeButton.setInteractive({ useHandCursor: true });
+    this.closeButton.setScrollFactor(0); // Keep fixed on screen
     this.add(this.closeButton);
 
     // Sound toggle row - more spacing from header
