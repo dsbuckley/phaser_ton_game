@@ -329,6 +329,27 @@ settingsModal.hide(); // Closes with fade-out animation
 **Methods:** `show()`, `hide()`, `getSoundEnabled()`, `getHapticEnabled()`
 **Use Cases:** Settings screens, preferences dialogs, pause menus
 
+### ComboBonusDisplay (`src/components/ComboBonusDisplay.js`)
+Displays animated combo bonus notifications when players chain consecutive energy/gem rewards.
+
+```javascript
+const comboDisplay = new ComboBonusDisplay(scene, centerX, centerY, {
+  itemType: 'energy', // or 'gems'
+  bonusAmount: 3
+});
+scene.add.existing(comboDisplay);
+```
+
+**Architecture:** Container-based component with two text lines and auto-animation
+**Features:**
+- Two-line display: "Combo Bonus" (title) + "+X Energy" or "+X Gems" (reward)
+- Scale pop-in animation (0 → 1.2 → 1.0) with Back.easeOut
+- Floats upward 250 pixels over 1 second
+- Fades out simultaneously with upward movement
+- Auto-destroys after animation completes
+**Text Styling:** Tilt Warp font, white fill, black stroke (6px), high resolution (2x)
+**Use Cases:** Combo rewards, streak bonuses, special achievement notifications
+
 ### NineSlice Pattern (WebGL Only)
 **Critical for scalable UI elements that preserve corner/edge integrity.**
 
@@ -1043,3 +1064,474 @@ SELECT * FROM user_profiles WHERE telegram_id = 123456789;
 - Full setup guide: `SUPABASE_INTEGRATION.md`
 - SQL schema: `supabase_schema.sql`
 - Testing checklist and troubleshooting in integration docs
+
+## Game Mechanics & Systems
+
+### Combo Tracking System
+The game tracks consecutive chest taps that yield the same reward type (energy or gems) and awards bonus items for combos of 3+ taps.
+
+**Combo State Tracking:**
+```javascript
+// In MainScene constructor
+this.comboTracker = {
+  itemType: null,        // 'energy' or 'gems'
+  count: 0,              // Number of consecutive clicks
+  lastClickTime: 0,      // Timestamp of last click
+  pendingRewards: []     // Array of reward amounts to apply
+};
+this.comboTimer = null;  // Reference to 350ms delayed event
+```
+
+**Combo Rules:**
+- Must tap within 700ms to continue combo (lenient for mobile)
+- Must get same reward type (energy OR gems, not mixed)
+- Combo triggers bonus after 3+ consecutive taps
+- 350ms delay before processing combo (allows combos to build before showing UI)
+
+**Pattern: Registering combo clicks**
+```javascript
+registerComboClick(itemType, rewardAmount) {
+  const now = this.time.now;
+  const timeSinceLastClick = now - this.comboTracker.lastClickTime;
+
+  // Check if continuing existing combo (same type, within 700ms)
+  if (this.comboTracker.itemType === itemType && timeSinceLastClick <= 700) {
+    this.comboTracker.count++;
+    this.comboTracker.pendingRewards.push(rewardAmount);
+    this.comboTracker.lastClickTime = now;
+    console.log(`🔥 Combo continued: ${itemType} x${this.comboTracker.count}`);
+  } else {
+    // Start new combo
+    this.comboTracker.itemType = itemType;
+    this.comboTracker.count = 1;
+    this.comboTracker.lastClickTime = now;
+    this.comboTracker.pendingRewards = [rewardAmount];
+    console.log(`🎯 Combo started: ${itemType}`);
+  }
+
+  // Cancel previous combo timer if exists
+  if (this.comboTimer) {
+    this.comboTimer.remove();
+  }
+
+  // Wait 350ms to see if combo continues
+  this.comboTimer = this.time.delayedCall(350, () => {
+    this.processComboReward();
+  });
+}
+```
+
+**Pattern: Processing combo rewards**
+```javascript
+processComboReward() {
+  if (this.comboTracker.count === 0) return;
+
+  const totalCount = this.comboTracker.count;
+  const itemType = this.comboTracker.itemType;
+
+  // Combo bonus thresholds
+  if (totalCount >= 3) {
+    const bonusAmount = totalCount === 3 ? 3 : totalCount === 4 ? 4 : 5; // 3, 4, or 5 max
+
+    // Award bonus
+    if (itemType === 'energy') {
+      const newEnergy = Math.min(this.batteryState.get() + bonusAmount, 100);
+      this.batteryState.set(newEnergy);
+      this.batteryBar.setBattery(newEnergy, 100, true);
+    } else if (itemType === 'gems') {
+      this.gemsState.set(this.gemsState.get() + bonusAmount);
+      this.statusBar.setResource('gems', this.gemsState.get(), true);
+    }
+
+    // Show combo bonus UI
+    const centerX = this.cameras.main.width / 2;
+    const centerY = this.cameras.main.height / 2;
+    const comboDisplay = new ComboBonusDisplay(this, centerX, centerY - 100, {
+      itemType: itemType,
+      bonusAmount: bonusAmount
+    });
+    this.add.existing(comboDisplay);
+
+    console.log(`💥 COMBO BONUS! ${itemType} x${totalCount} = +${bonusAmount} bonus`);
+  }
+
+  // Reset combo tracker
+  this.comboTracker.itemType = null;
+  this.comboTracker.count = 0;
+  this.comboTracker.lastClickTime = 0;
+  this.comboTracker.pendingRewards = [];
+}
+```
+
+**Bonus Multipliers:**
+- 3 taps: +3 bonus items
+- 4 taps: +4 bonus items
+- 5+ taps: +5 bonus items (capped)
+
+This creates engaging gameplay where fast, consecutive taps of the same reward type are rewarded with bonus items.
+
+### Hourly Energy Grant System
+In addition to offline regeneration, the game grants energy automatically every hour when energy is below 100.
+
+**Pattern: Calculating hourly grants**
+```javascript
+calculateHourlyEnergyGrants() {
+  const currentEnergy = this.batteryState.get();
+
+  // Only grant energy if below 100 (auto-refill cap)
+  if (currentEnergy >= 100) {
+    console.log('Energy already at or above 100, no auto-refill needed');
+    return 0;
+  }
+
+  // Get last grant hour from localStorage
+  const lastGrantHour = this.lastEnergyGrantHour.get() || Date.now();
+  const currentTime = Date.now();
+
+  // Truncate to hour boundaries (e.g., 10:45 becomes 10:00)
+  const lastHourDate = new Date(lastGrantHour);
+  const currentHourDate = new Date(currentTime);
+  lastHourDate.setMinutes(0, 0, 0);
+  currentHourDate.setMinutes(0, 0, 0);
+
+  // Calculate hours difference
+  const hoursDiff = Math.floor((currentHourDate - lastHourDate) / (1000 * 60 * 60));
+
+  if (hoursDiff > 0) {
+    // Grant 5 energy per hour
+    const energyToGrant = hoursDiff * 5;
+
+    // Cap at 100 maximum
+    const newEnergy = Math.min(currentEnergy + energyToGrant, 100);
+    const actualGranted = newEnergy - currentEnergy;
+
+    // Update energy state
+    this.batteryState.set(newEnergy);
+
+    // Update last grant hour to current hour
+    this.lastEnergyGrantHour.set(currentHourDate.getTime());
+
+    console.log(`Hourly energy grants: +${actualGranted} energy (${hoursDiff} hours passed)`);
+
+    return actualGranted;
+  }
+
+  return 0;
+}
+```
+
+**Grant Rate:** 5 energy per full hour
+**Cap:** Maximum 100 energy (does not grant if already at 100)
+**Tracking:** Uses `lastEnergyGrantHour` in localStorage (persisted state)
+**Use Cases:** Rewarding players who return to the game regularly, encouraging hourly check-ins
+
+### First-Time Events System
+The game tracks special one-time events that should only trigger once per user (e.g., tutorials, guaranteed rewards).
+
+**State Initialization:**
+```javascript
+// In create() method - loaded from database in initializeUser()
+this.firstTimeEvents = {
+  guaranteed_mega_jackpot: false,  // First chest guarantees mega jackpot
+  tutorial_completed: false,
+  welcome_bonus_claimed: false
+};
+```
+
+**Pattern: Checking and setting first-time events**
+```javascript
+// Check if event has occurred
+if (!this.firstTimeEvents.guaranteed_mega_jackpot) {
+  // Trigger special event
+  console.log('🎰 GUARANTEED MEGA JACKPOT for new user!');
+  triggerMegaJackpot();
+
+  // Mark as completed (saved to database)
+  this.firstTimeEvents.guaranteed_mega_jackpot = true;
+  this.saveStatsToSupabase(); // Persist to database
+}
+```
+
+**Persistence:** First-time events are stored in Supabase `user_stats` table in a JSONB column, ensuring they survive across devices and browser cache clears.
+
+**Use Cases:**
+- Tutorial flows (show once, never again)
+- Welcome bonuses for new users
+- Guaranteed rewards on first interaction
+- One-time special events or promotions
+
+### Auto-Pop System
+Special feature that automatically opens chests in rapid sequence without energy consumption.
+
+**State Tracking:**
+```javascript
+// In MainScene constructor
+this.isAutoPopping = false;           // Prevents manual clicks during auto-pop
+this.autoPopPopsRemaining = 0;        // Stacking counter
+this.autoPopCountText = null;         // UI countdown display
+```
+
+**Pattern: Triggering auto-pop sequence**
+```javascript
+triggerAutoPop(count = 5) {
+  // Stack if already running (multiple triggers add to queue)
+  this.autoPopPopsRemaining += count;
+
+  if (!this.isAutoPopping) {
+    this.startAutoPopSequence();
+  } else {
+    // Update countdown text if already running
+    if (this.autoPopCountText) {
+      this.autoPopCountText.setText(`${this.autoPopPopsRemaining} left`);
+    }
+  }
+}
+
+startAutoPopSequence() {
+  this.isAutoPopping = true;
+
+  // Create countdown text UI
+  const centerX = this.cameras.main.width / 2;
+  this.autoPopCountText = this.add.text(centerX, 120, `${this.autoPopPopsRemaining} left`, {
+    fontFamily: 'Tilt Warp',
+    fontSize: '24px',
+    fill: '#FFD700',
+    stroke: '#000000',
+    strokeThickness: 4,
+    resolution: 2
+  }).setOrigin(0.5).setDepth(1500);
+
+  // Pop every 100ms (10 per second)
+  const autoPopEvent = this.time.addEvent({
+    delay: 100,
+    callback: () => {
+      this.openChestAutoPop(); // Modified openChest without energy cost
+      this.autoPopPopsRemaining--;
+
+      // Update countdown
+      if (this.autoPopCountText) {
+        this.autoPopCountText.setText(`${this.autoPopPopsRemaining} left`);
+      }
+
+      if (this.autoPopPopsRemaining <= 0) {
+        autoPopEvent.remove();
+        this.stopAutoPopSequence();
+      }
+    },
+    loop: true
+  });
+}
+
+stopAutoPopSequence() {
+  this.isAutoPopping = false;
+
+  // Cleanup countdown text
+  if (this.autoPopCountText) {
+    this.autoPopCountText.destroy();
+    this.autoPopCountText = null;
+  }
+}
+
+openChestAutoPop() {
+  // Modified version of openChest() that:
+  // 1. Does NOT consume energy
+  // 2. Does NOT check energy requirements
+  // 3. Does NOT register combo clicks
+  // 4. Otherwise identical reward logic
+
+  // Prevent manual clicks during auto-pop
+  if (this.isAutoPopping) {
+    // ... same reward logic as openChest() ...
+  }
+}
+```
+
+**Features:**
+- No energy consumption (free chest opens)
+- Stacking (multiple auto-pop triggers add to queue)
+- Visual countdown text showing remaining pops
+- Blocks manual chest taps during sequence (prevents double-rewards)
+- Same reward logic as normal chest opens (coins, jackpots, etc.)
+- Rapid fire (10 pops per second)
+
+**Use Cases:**
+- Special event rewards (login bonuses, achievements)
+- Ad reward system (watch ad → get 5 auto-pops)
+- Power-ups or boosters
+- Tutorial demonstrations
+
+### Ambient Visual Effects
+
+**Cloud System - Multi-Layer Parallax**
+
+Creates atmospheric depth with multiple cloud layers scrolling at different speeds.
+
+```javascript
+// Define cloud layers (in create())
+this.cloudLayers = [
+  {
+    key: 'cloud1',
+    depth: 1,
+    speed: { min: 30, max: 50 },
+    yPosition: { min: 50, max: 200 },
+    scale: { min: 0.4, max: 0.7 },
+    alpha: 0.6
+  },
+  {
+    key: 'cloud2',
+    depth: 2,
+    speed: { min: 20, max: 40 },
+    yPosition: { min: 150, max: 300 },
+    scale: { min: 0.5, max: 0.9 },
+    alpha: 0.5
+  }
+];
+
+this.activeClouds = [];
+
+// Spawn clouds at random intervals
+this.time.addEvent({
+  delay: Phaser.Math.Between(3000, 6000),
+  callback: () => this.spawnCloud(),
+  loop: true
+});
+```
+
+**Pattern: Spawning and animating clouds**
+```javascript
+spawnCloud() {
+  const screenWidth = this.cameras.main.width;
+
+  // Pick random layer
+  const layer = Phaser.Utils.Array.GetRandom(this.cloudLayers);
+  const cloudKey = layer.key;
+
+  // Random properties from layer config
+  const scale = Phaser.Math.FloatBetween(layer.scale.min, layer.scale.max);
+  const y = Phaser.Math.Between(layer.yPosition.min, layer.yPosition.max);
+
+  // Create cloud off-screen to the left
+  const cloud = this.add.image(-200, y, cloudKey);
+  cloud.setScale(scale);
+  cloud.setAlpha(layer.alpha);
+  cloud.setDepth(layer.depth);
+
+  this.activeClouds.push(cloud);
+
+  // Calculate duration based on speed
+  const speed = Phaser.Math.Between(layer.speed.min, layer.speed.max);
+  const duration = ((screenWidth + 400) / speed) * 1000;
+
+  // Animate from left to right
+  this.tweens.add({
+    targets: cloud,
+    x: screenWidth + 200,
+    duration: duration,
+    ease: 'Linear',
+    onComplete: () => {
+      const index = this.activeClouds.indexOf(cloud);
+      if (index > -1) this.activeClouds.splice(index, 1);
+      cloud.destroy();
+    }
+  });
+}
+```
+
+**Features:**
+- Depth-based layering (layer 1 in front, layer 2 behind)
+- Variable speeds create parallax effect
+- Random spawn intervals (3-6 seconds)
+- Automatic cleanup when off-screen
+- Configurable scale, alpha, and position ranges
+
+**Sparkle Effects - Ambient Twinkles**
+
+Twinkling sparkles around the sun for atmospheric polish.
+
+```javascript
+createSparkles() {
+  // Sun position in background
+  const sunX = 80;
+  const sunY = 280;
+
+  // Define sparkle area
+  const sparkleAreaX = sunX + 50;
+  const sparkleAreaY = sunY + 50;
+  const areaWidth = 200;
+  const areaHeight = 150;
+
+  this.activeSparkles = [];
+
+  // Create sparkles continuously
+  this.sparkleTimer = this.time.addEvent({
+    delay: 800, // Every 0.8 seconds
+    callback: () => {
+      // Limit to 6 active sparkles
+      if (this.activeSparkles.length < 6) {
+        this.createSingleSparkle(sparkleAreaX, sparkleAreaY, areaWidth, areaHeight);
+      }
+    },
+    loop: true
+  });
+}
+
+createSingleSparkle(baseX, baseY, areaWidth, areaHeight) {
+  // Random position within area
+  const x = baseX + Phaser.Math.Between(-areaWidth / 2, areaWidth / 2);
+  const y = baseY + Phaser.Math.Between(-areaHeight / 2, areaHeight / 2);
+
+  // Random scale (10-30px from 256px original)
+  const randomScale = Phaser.Math.FloatBetween(0.04, 0.12);
+
+  const sparkle = this.add.image(x, y, 'sparkle');
+  sparkle.setScale(randomScale);
+  sparkle.setAlpha(0); // Start invisible
+  sparkle.setDepth(5);
+
+  this.activeSparkles.push(sparkle);
+
+  // Fade in animation
+  this.tweens.add({
+    targets: sparkle,
+    alpha: Phaser.Math.FloatBetween(0.5, 0.9),
+    duration: 500,
+    ease: 'Sine.easeIn'
+  });
+
+  // Gentle rotation
+  this.tweens.add({
+    targets: sparkle,
+    angle: 360,
+    duration: 2000,
+    ease: 'Linear'
+  });
+
+  // Auto-destroy after 2 seconds
+  this.time.delayedCall(2000, () => {
+    this.tweens.add({
+      targets: sparkle,
+      alpha: 0,
+      duration: 500,
+      ease: 'Sine.easeOut',
+      onComplete: () => {
+        const index = this.activeSparkles.indexOf(sparkle);
+        if (index > -1) this.activeSparkles.splice(index, 1);
+        sparkle.destroy();
+      }
+    });
+  });
+}
+```
+
+**Features:**
+- Random positioning within defined area
+- Fade in/out animations (500ms)
+- Gentle rotation (360° over 2 seconds)
+- 2-second lifespan
+- Automatic cleanup and memory management
+- Limited to 6 active sparkles for performance
+
+**Use Cases:**
+- Background atmosphere and polish
+- Visual interest during idle states
+- Environment storytelling (sun rays, magical effects, etc.)
