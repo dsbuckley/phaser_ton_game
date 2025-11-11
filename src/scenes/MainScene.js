@@ -1375,7 +1375,7 @@ export default class MainScene extends Phaser.Scene {
       // Mark as used in database
       this.firstTimeEvents.guaranteed_mega_jackpot = true;
       console.log('First-time mega jackpot flag set to true');
-    } else if (rand < 0.006) {
+    } else if (rand < 0.005) {
       // 0.8% mega jackpot (normal probability)
       isMegaJackpot = true;
       coinReward = Phaser.Utils.Array.GetRandom([3000, 4000, 5000]);
