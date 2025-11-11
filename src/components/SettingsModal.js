@@ -65,7 +65,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       this.scene.scale.width * 2,
       this.scene.scale.height * 2,
       0x000000,
-      0.7
+      0.85
     );
     this.overlay.setOrigin(0, 0);
     this.overlay.setScrollFactor(0);
@@ -453,7 +453,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       overlayDiv.style.left = '0';
       overlayDiv.style.width = '100%';
       overlayDiv.style.height = '100%';
-      overlayDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.7)'; // 70% black, matching modal overlay
+      overlayDiv.style.backgroundColor = 'rgba(0, 0, 0, 0.85)'; // 85% opaque (darker), matching modal overlay
       overlayDiv.style.borderRadius = '50%';
       overlayDiv.style.pointerEvents = 'none';
       overlayDiv.style.zIndex = '1';
@@ -518,7 +518,7 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
         // Reset position and alpha back to defaults for next show
         this.modalContent.x = 0;
         this.modalContent.y = 0;
-        this.overlay.setAlpha(0.7);
+        this.overlay.setAlpha(0.85);
       }
     });
 
