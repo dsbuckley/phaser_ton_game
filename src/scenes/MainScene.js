@@ -681,14 +681,21 @@ export default class MainScene extends Phaser.Scene {
         } else {
           this.sound.setMute(true);
         }
+        // Save settings to database when toggled
+        this.saveStatsToSupabase();
       },
       onHapticToggle: (enabled) => {
         console.log('Haptic toggle:', enabled);
         // Haptic feedback is automatically handled in the modal component
         // based on the hapticEnabled state
+        // Save settings to database when toggled
+        this.saveStatsToSupabase();
       }
     });
     this.add.existing(this.settingsModal);
+
+    // Apply loaded settings from database (if available from initializeUser)
+    this.applyLoadedSettings();
 
     // Get Telegram user photo URL if available
     let avatarUrl = null;
@@ -743,6 +750,31 @@ export default class MainScene extends Phaser.Scene {
 
     // Battery bar removed - energy now shown in status bar
     // this.createBatteryBar();
+  }
+
+  applyLoadedSettings() {
+    // Apply settings loaded from database (after initializeUser)
+    // Database is authoritative - overrides localStorage
+    if (this.loadedSoundEnabled !== undefined && this.settingsModal) {
+      console.log('Applying loaded sound setting:', this.loadedSoundEnabled);
+
+      // Update the settings modal internal state to match database
+      this.settingsModal.soundEnabledState.set(this.loadedSoundEnabled);
+
+      // Apply the sound setting immediately
+      if (this.loadedSoundEnabled) {
+        this.sound.setMute(false);
+      } else {
+        this.sound.setMute(true);
+      }
+    }
+
+    if (this.loadedHapticEnabled !== undefined && this.settingsModal) {
+      console.log('Applying loaded haptic setting:', this.loadedHapticEnabled);
+
+      // Update the settings modal internal state to match database
+      this.settingsModal.hapticEnabledState.set(this.loadedHapticEnabled);
+    }
   }
 
   createBatteryBar() {
@@ -991,6 +1023,17 @@ export default class MainScene extends Phaser.Scene {
         this.userLevelState.set(stats.user_level || 1);
         this.totalChestsOpenedState.set(stats.total_chests_opened || 0);
 
+        // Load settings from database (use ?? to properly handle boolean values)
+        // Database is authoritative - override localStorage if different
+        const soundEnabled = stats.sound_enabled ?? true;
+        const hapticEnabled = stats.haptic_enabled ?? true;
+
+        // Store settings for later application (after scene is fully created)
+        this.loadedSoundEnabled = soundEnabled;
+        this.loadedHapticEnabled = hapticEnabled;
+
+        console.log('Settings loaded from database:', { soundEnabled, hapticEnabled });
+
         // Load first-time events from database (JSONB field)
         if (stats.first_time_events) {
           this.firstTimeEvents = stats.first_time_events;
@@ -1036,6 +1079,10 @@ export default class MainScene extends Phaser.Scene {
         // New user - create initial stats row using localStorage defaults
         console.log('New user detected, creating initial stats row');
 
+        // Default settings for new users
+        this.loadedSoundEnabled = true;
+        this.loadedHapticEnabled = true;
+
         const initialStats = {
           telegram_id: this.telegramUser.id,
           coins: this.coinsState.get(),
@@ -1045,7 +1092,9 @@ export default class MainScene extends Phaser.Scene {
           user_level: this.userLevelState.get(),
           total_chests_opened: this.totalChestsOpenedState.get(),
           last_energy_update: new Date().toISOString(),
-          first_time_events: this.firstTimeEvents // Include first-time events for new users
+          first_time_events: this.firstTimeEvents, // Include first-time events for new users
+          sound_enabled: true,
+          haptic_enabled: true
         };
 
         const { data: newStats, error: createError } = await this.supabase
@@ -1079,6 +1128,14 @@ export default class MainScene extends Phaser.Scene {
       const lastGrantHourTimestamp = this.lastEnergyGrantHour.get();
       const lastGrantHourISO = new Date(lastGrantHourTimestamp).toISOString();
 
+      // Get current settings from the settings modal (if it exists)
+      let soundEnabled = true;
+      let hapticEnabled = true;
+      if (this.settingsModal) {
+        soundEnabled = this.settingsModal.soundEnabledState.get();
+        hapticEnabled = this.settingsModal.hapticEnabledState.get();
+      }
+
       const statsData = {
         telegram_id: this.telegramUser.id,
         coins: this.coinsState.get(),
@@ -1089,7 +1146,9 @@ export default class MainScene extends Phaser.Scene {
         total_chests_opened: this.totalChestsOpenedState.get(),
         last_energy_update: new Date().toISOString(),
         last_energy_grant_hour: lastGrantHourISO,
-        first_time_events: this.firstTimeEvents // Persist first-time events to database
+        first_time_events: this.firstTimeEvents, // Persist first-time events to database
+        sound_enabled: soundEnabled,
+        haptic_enabled: hapticEnabled
       };
 
       const { error } = await this.supabase

@@ -35,6 +35,10 @@ CREATE TABLE IF NOT EXISTS user_stats (
   high_score INTEGER DEFAULT 0 CHECK (high_score >= 0),
   total_chests_opened INTEGER DEFAULT 0 CHECK (total_chests_opened >= 0),
 
+  -- Settings/Preferences
+  sound_enabled BOOLEAN DEFAULT true,
+  haptic_enabled BOOLEAN DEFAULT true,
+
   -- First-time user experience tracking (JSONB for flexibility)
   -- Stores boolean flags for one-time events (tutorial, guaranteed rewards, etc.)
   first_time_events JSONB DEFAULT '{
@@ -228,6 +232,24 @@ WHERE first_time_events IS NULL;
 -- Create GIN index for JSONB queries if not exists
 CREATE INDEX IF NOT EXISTS idx_first_time_events
 ON user_stats USING GIN (first_time_events);
+
+-- ============================================
+-- MIGRATION: Add settings columns
+-- ============================================
+-- Run this if you already have an existing user_stats table
+
+-- Add sound_enabled column
+ALTER TABLE user_stats
+ADD COLUMN IF NOT EXISTS sound_enabled BOOLEAN DEFAULT true;
+
+-- Add haptic_enabled column
+ALTER TABLE user_stats
+ADD COLUMN IF NOT EXISTS haptic_enabled BOOLEAN DEFAULT true;
+
+-- Initialize existing users with default settings (both enabled)
+UPDATE user_stats
+SET sound_enabled = true, haptic_enabled = true
+WHERE sound_enabled IS NULL OR haptic_enabled IS NULL;
 
 -- ============================================
 -- PRODUCTION SECURITY NOTES
