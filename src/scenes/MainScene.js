@@ -2295,10 +2295,10 @@ export default class MainScene extends Phaser.Scene {
     let coinReward, isBigPayout = false;
 
     // NOTE: Mega jackpot disabled during auto-pop (too disruptive)
-    if (rand < 0.20) {
-      // 20% big payout
+    if (rand < 0.10) {
+      // 10% big payout
       isBigPayout = true;
-      coinReward = Phaser.Utils.Array.GetRandom([50, 75, 100, 125, 150]);
+      coinReward = Phaser.Utils.Array.GetRandom([75, 100, 125, 150]);
     } else {
       // 80% normal payout
       coinReward = Phaser.Math.Between(3, 49);
