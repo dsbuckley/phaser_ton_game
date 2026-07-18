@@ -202,7 +202,7 @@ export default class RewardEffectsSystem {
       }
 
       // Track combo BEFORE applying rewards
-      this.scene.handleSpecialtyItemClick('gems', 1);
+      this.scene.combo.handleSpecialtyItemClick('gems', 1);
 
       // Play emerald collection sound
       this.scene.sound.play('emerald_sound');
@@ -391,7 +391,7 @@ export default class RewardEffectsSystem {
       }
 
       // Track combo BEFORE applying rewards
-      this.scene.handleSpecialtyItemClick('energy', 1);
+      this.scene.combo.handleSpecialtyItemClick('energy', 1);
 
       // Play energy collection sound
       this.scene.sound.play('energy_collect_sound');
