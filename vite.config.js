@@ -15,7 +15,7 @@ export default defineConfig({
     })
   ],
   server: {
-    port: 3000,
+    port: Number(process.env.PORT) || 3000,
     open: true,
     strictPort: false,
     // API + bot webhook are served by `wrangler dev` locally
