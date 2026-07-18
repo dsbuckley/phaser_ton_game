@@ -20,6 +20,8 @@ npx wrangler secret put TELEGRAM_WEBHOOK_SECRET   # any long random string, e.g.
 
 Run these in the Supabase SQL Editor **in order**:
 
+0. `migrations/0000_base.sql` — base `users`/`user_stats` tables. Only needed
+   on a **fresh** Supabase project (the original project already had them).
 1. `migrations/0002_tables.sql` — new tables/columns (safe anytime, additive)
 2. `migrations/0003_functions.sql` — game-logic functions (safe anytime)
 3. `migrations/0001_lock_rls.sql` — ⚠️ **run this LAST, right when you deploy
