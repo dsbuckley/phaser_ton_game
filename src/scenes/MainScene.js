@@ -12,6 +12,7 @@ import EnergyCountdownTimer from '../components/EnergyCountdownTimer.js';
 import SettingsModal from '../components/SettingsModal.js';
 import ComboBonusDisplay from '../components/ComboBonusDisplay.js';
 import AmbientSystem from '../systems/AmbientSystem.js';
+import UISlideSystem from '../systems/UISlideSystem.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -28,7 +29,6 @@ export default class MainScene extends Phaser.Scene {
     this.autoPopCountText = null; // Reference to countdown text
     this.autoPopPopsRemaining = 0; // Counter for remaining auto-pops (can stack)
     this.activeConfettiSprites = new Set(); // Track active confetti sprites
-    this.uiSlideCheckTimer = null; // Timer for checking when to slide UI back in
 
     // Combo tracking state
     this.comboTracker = {
@@ -110,6 +110,9 @@ export default class MainScene extends Phaser.Scene {
     this.ambient = new AmbientSystem(this);
     this.ambient.createChestAnimation();
     this.ambient.createPalmTreeAnimation();
+
+    // UI chrome slide-out/in during chest opening effects
+    this.uiSlide = new UISlideSystem(this);
 
     // Tear down all systems when the scene shuts down or is destroyed
     this.events.once('shutdown', () => this.destroySystems());
@@ -245,6 +248,10 @@ export default class MainScene extends Phaser.Scene {
     if (this.ambient) {
       this.ambient.destroy();
       this.ambient = null;
+    }
+    if (this.uiSlide) {
+      this.uiSlide.destroy();
+      this.uiSlide = null;
     }
   }
 
@@ -950,7 +957,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Slide UI out of screen BEFORE audio unlock to prevent animation delays
-    this.slideUIOut();
+    this.uiSlide.slideOut();
 
     // Resume AudioContext on first interaction (required by browsers)
     if (!this.audioUnlocked) {
@@ -986,7 +993,7 @@ export default class MainScene extends Phaser.Scene {
     this.syncBuffer.xp_earned++;
     this.gainXp(1);
 
-    // Note: startUISlideBackMonitoring() is now called AFTER confetti spawns
+    // Note: uiSlide.startSlideBackMonitoring() is now called AFTER confetti spawns
     // to prevent race condition where monitoring checks empty Set before confetti exists
 
     // Check for guaranteed mega jackpot (first-time experience)
@@ -1086,7 +1093,7 @@ export default class MainScene extends Phaser.Scene {
         }
 
         // Start monitoring AFTER confetti exists to prevent race condition
-        this.startUISlideBackMonitoring();
+        this.uiSlide.startSlideBackMonitoring();
       });
 
       // Play closing animation after opening completes
@@ -1923,7 +1930,7 @@ export default class MainScene extends Phaser.Scene {
     this.lastClickTime = this.time.now;
 
     // Slide UI out (same as normal)
-    this.slideUIOut();
+    this.uiSlide.slideOut();
 
     // Trigger haptic feedback
     if (window.Telegram?.WebApp?.HapticFeedback) {
@@ -2000,7 +2007,7 @@ export default class MainScene extends Phaser.Scene {
       }
 
       // Start monitoring for UI slide back
-      this.startUISlideBackMonitoring();
+      this.uiSlide.startSlideBackMonitoring();
     });
 
     // Play closing animation
@@ -2262,7 +2269,7 @@ export default class MainScene extends Phaser.Scene {
     // Start streaming timer after 700ms delay
     this.time.delayedCall(700, () => {
       // Start monitoring AFTER first confetti burst for mega jackpot
-      this.startUISlideBackMonitoring();
+      this.uiSlide.startSlideBackMonitoring();
 
       const burstTimer = this.time.addEvent({
         delay: burstInterval,
@@ -2337,103 +2344,6 @@ export default class MainScene extends Phaser.Scene {
    * Slide UI elements out of screen (upward for top, downward for bottom)
    * Only slides clickable elements - keeps resource stats visible
    */
-  slideUIOut() {
-    // Slide only avatar and settings button from StatusBar (keep resource pills visible)
-    // Use absolute position -180 (above screen)
-    if (this.statusBar && this.statusBar.slideAvatarAndControls) {
-      this.statusBar.slideAvatarAndControls(-180, 400, 'Power2.easeIn');
-    }
-
-    // Slide EnergyCountdownTimer up if visible
-    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
-      this.tweens.add({
-        targets: this.energyCountdownTimer,
-        y: -100,
-        duration: 400,
-        ease: 'Power2.easeIn'
-      });
-    }
-
-
-    // Slide BottomTabMenu down (out of screen at bottom)
-    if (this.bottomTabMenu) {
-      const screenHeight = this.cameras.main.height;
-      const slideOutY = screenHeight + 150; // Slide down past screen edge
-
-      this.tweens.add({
-        targets: this.bottomTabMenu,
-        y: slideOutY,
-        duration: 400,
-        ease: 'Power2.easeIn'
-      });
-    }
-  }
-
-  /**
-   * Slide UI elements back into screen (downward for top, upward for bottom)
-   * Brings back avatar and controls, keeps resource pills in place
-   */
-  slideUIIn() {
-    // Slide avatar and settings button back to original position (y: 0)
-    if (this.statusBar && this.statusBar.slideAvatarAndControls) {
-      this.statusBar.slideAvatarAndControls(0, 500, 'Power2.easeOut');
-    }
-
-    // Slide EnergyCountdownTimer down to original position if visible
-    if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
-      this.tweens.add({
-        targets: this.energyCountdownTimer,
-        y: 70,
-        duration: 500,
-        ease: 'Power2.easeOut'
-      });
-    }
-
-
-    // Slide BottomTabMenu up (back to original position at bottom)
-    if (this.bottomTabMenu) {
-      const screenHeight = this.cameras.main.height;
-      const barHeight = 100;
-      const originalY = screenHeight - (barHeight / 2); // Original position
-
-      this.tweens.add({
-        targets: this.bottomTabMenu,
-        y: originalY,
-        duration: 500,
-        ease: 'Power2.easeOut'
-      });
-    }
-  }
-
-  /**
-   * Start monitoring for when to slide UI back in
-   * Checks every 100ms if all confetti sprites are cleared
-   */
-  startUISlideBackMonitoring() {
-    // Clear any existing timer
-    if (this.uiSlideCheckTimer) {
-      this.uiSlideCheckTimer.remove();
-    }
-
-    this.uiSlideCheckTimer = this.time.addEvent({
-      delay: 100, // Check every 100ms
-      callback: () => {
-        // Check if all confetti is cleared and not playing jackpot
-        if (this.activeConfettiSprites.size === 0 && !this.isJackpotPlaying) {
-          // Slide UI back in
-          this.slideUIIn();
-
-          // Stop checking
-          if (this.uiSlideCheckTimer) {
-            this.uiSlideCheckTimer.remove();
-            this.uiSlideCheckTimer = null;
-          }
-        }
-      },
-      loop: true
-    });
-  }
-
   async onWalletConnected(wallet) {
     try {
       // Get wallet address
