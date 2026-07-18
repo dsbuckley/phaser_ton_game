@@ -88,7 +88,7 @@ export default class UISlideSystem {
       delay: 100, // Check every 100ms
       callback: () => {
         // Check if all confetti is cleared and not playing jackpot
-        if (this.scene.activeConfettiSprites.size === 0 && !this.scene.isJackpotPlaying) {
+        if (this.scene.rewards.activeConfettiSprites.size === 0 && !this.scene.isJackpotPlaying) {
           // Slide UI back in
           this.slideIn();
 
