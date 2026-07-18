@@ -1,0 +1,7 @@
+# Copy to .dev.vars for local `wrangler dev` (git-ignored)
+TELEGRAM_BOT_TOKEN=123456:ABC-your-bot-token
+SUPABASE_SERVICE_ROLE_KEY=eyJ...service-role-key
+TELEGRAM_WEBHOOK_SECRET=any-long-random-string
+# Allows `Authorization: tma mock:<telegram_id>` for local testing outside Telegram.
+# NEVER set this in production.
+DEV_ALLOW_MOCK=1

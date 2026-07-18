@@ -17,7 +17,12 @@ export default defineConfig({
   server: {
     port: 3000,
     open: true,
-    strictPort: false
+    strictPort: false,
+    // API + bot webhook are served by `wrangler dev` locally
+    proxy: {
+      '/api': 'http://localhost:8787',
+      '/webhook': 'http://localhost:8787'
+    }
   },
   resolve: {
     alias: {
@@ -25,7 +30,7 @@ export default defineConfig({
     }
   },
   optimizeDeps: {
-    include: ['phaser', '@ton/phaser-sdk', '@supabase/supabase-js']
+    include: ['phaser']
   },
   build: {
     rollupOptions: {

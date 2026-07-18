@@ -1,7 +1,11 @@
 import Phaser from 'phaser';
 import { TonConnectUI } from '@tonconnect/ui';
-import { createClient } from '@supabase/supabase-js';
-import { withPersistentState } from '../utils/persistentState.js';
+import { api } from '../utils/api.js';
+import { gameState } from '../state/gameState.js';
+import { buildTabs, setTabNotification } from '../config/tabs.js';
+import { levelFromXp, scaleCoins, levelUpRewards, coinMultiplier } from '../config/levels.js';
+import RewardCelebration from '../components/RewardCelebration.js';
+import LeaderboardModal from '../components/LeaderboardModal.js';
 import StatusBar from '../components/StatusBar.js';
 import BottomTabMenu from '../components/BottomTabMenu.js';
 import EnergyCountdownTimer from '../components/EnergyCountdownTimer.js';
@@ -12,7 +16,6 @@ export default class MainScene extends Phaser.Scene {
   constructor() {
     super({ key: 'MainScene' });
     this.tonConnectUI = null;
-    this.supabase = null;
     this.telegramUser = null;
     this.walletAddress = null;
     this.audioUnlocked = false;
@@ -34,6 +37,35 @@ export default class MainScene extends Phaser.Scene {
       pendingRewards: []     // Array of reward amounts to apply
     };
     this.comboTimer = null;  // Reference to 350ms delayed event
+
+    // Server sync state: gameplay deltas accumulate here between flushes.
+    // The Worker validates each batch and returns authoritative stats.
+    this.syncBuffer = this.createEmptySyncBuffer();
+    this.pendingFirstTimeEvents = {};
+    this.syncInFlight = false;
+    this.syncPending = false;
+    this.lastFlushTime = Date.now();
+    this.nextGrantAt = null; // server timestamp of the next hourly energy grant
+  }
+
+  createEmptySyncBuffer() {
+    return {
+      chests_opened: 0,
+      auto_pop_chests: 0,
+      coins_earned: 0,
+      gems_earned: 0,
+      energy_collected: 0,
+      mega_jackpots: 0,
+      auto_pops_collected: 0,
+      xp_earned: 0
+    };
+  }
+
+  bufferHasDeltas() {
+    const b = this.syncBuffer;
+    return b.chests_opened > 0 || b.coins_earned > 0 || b.gems_earned > 0 ||
+      b.energy_collected > 0 || b.mega_jackpots > 0 || b.auto_pops_collected > 0 ||
+      Object.keys(this.pendingFirstTimeEvents).length > 0;
   }
 
   async create() {
@@ -43,36 +75,18 @@ export default class MainScene extends Phaser.Scene {
     // Setup orientation change handling
     this.setupOrientationHandling();
 
-    // Initialize persistent coin state using phaser-hooks
-    // This will automatically save to localStorage and persist across sessions
-    this.coinsState = withPersistentState(this, 'totalCoins', 0);
+    // Shared cross-scene game state (same localStorage keys as before —
+    // existing players keep their balances). Server-authoritative values
+    // reconcile into these via applyServerState().
+    this.coinsState = gameState.coins;
+    this.batteryState = gameState.energy;
+    this.ticketsState = gameState.tickets;
+    this.gemsState = gameState.gems;
+    this.userLevelState = gameState.level;
+    this.totalChestsOpenedState = gameState.chests;
+    this.xpState = gameState.xp;
 
-    // Initialize persistent battery state (starts at 100)
-    this.batteryState = withPersistentState(this, 'batteryEnergy', 100);
-
-    // Initialize timestamp tracking for hourly energy grants (rounded to current hour)
-    const currentHourTimestamp = new Date();
-    currentHourTimestamp.setMinutes(0, 0, 0);
-    this.lastEnergyGrantHour = withPersistentState(this, 'lastEnergyGrantHour', currentHourTimestamp.getTime());
-
-    // Keep lastBatteryUpdateTime for tracking energy consumption
-    this.lastBatteryUpdateTime = withPersistentState(this, 'lastBatteryUpdateTime', Date.now());
-
-    // Initialize persistent state for tickets and gems (now tracked)
-    this.ticketsState = withPersistentState(this, 'totalTickets', 0);
-    this.gemsState = withPersistentState(this, 'totalGems', 0);
-    this.userLevelState = withPersistentState(this, 'userLevel', 1);
-    this.totalChestsOpenedState = withPersistentState(this, 'totalChestsOpened', 0);
-
-    // Initialize persistent state for tab notifications
-    // Each tab can have: { show: boolean, text: string|null }
-    this.tabNotificationsState = withPersistentState(this, 'tabNotifications', {
-      main: { show: false, text: null },
-      stickers: { show: true, text: 'NEW' },
-      wheel: { show: false, text: null },
-      earn: { show: false, text: null },
-      shop: { show: false, text: null }
-    });
+    // (Tab notification state lives in src/config/tabs.js helpers)
 
     // Initialize first-time events tracking (loaded from database in initializeUser)
     // Tracks one-time special events like guaranteed mega jackpot, tutorial, etc.
@@ -85,16 +99,10 @@ export default class MainScene extends Phaser.Scene {
     // Initialize offline energy to 0 (will be calculated from database in initializeUser)
     this.offlineEnergyGained = 0;
 
-    // Initialize Supabase client
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'YOUR_SUPABASE_URL';
-    const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_SUPABASE_ANON_KEY';
-
-    this.supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-    // Get Telegram WebApp user data
+    // Get Telegram WebApp user data (display only — trust comes from the server)
     this.getTelegramUserData();
 
-    // Initialize user in database and load stats from Supabase
+    // Authenticate with the Worker and load authoritative stats
     await this.initializeUser();
 
     // Create treasure chest animation
@@ -114,58 +122,34 @@ export default class MainScene extends Phaser.Scene {
     // Start battery regeneration timer
     this.startBatteryRegeneration();
 
-    // Start auto-save timer (saves stats to Supabase every 5 seconds)
-    this.startAutoSave();
+    // Start the sync loop (flushes gameplay deltas to the Worker)
+    this.startSyncLoop();
 
     // Start energy countdown timer updates (updates every second)
     this.startEnergyCountdownUpdate();
+
+    // MainScene sleeps while satellite tab scenes are open. On wake,
+    // refresh the visible UI from shared state (satellites may have
+    // changed balances via wheel spins, task claims, purchases, etc.)
+    this.events.on('wake', () => {
+      if (this.statusBar) {
+        this.statusBar.setResource('coins', this.coinsState.get(), false);
+        this.statusBar.setResource('energy', this.batteryState.get(), false);
+        this.statusBar.setResource('gems', this.gemsState.get(), false);
+        this.statusBar.setLevel(this.userLevelState.get());
+      }
+      if (this.bottomTabMenu) {
+        this.bottomTabMenu.setActiveTab('main');
+      }
+      this.updateEnergyTimerVisibility();
+      // Pull authoritative stats in case a satellite changed them server-side
+      this.flushSync();
+    });
   }
 
-  calculateHourlyEnergyGrants() {
-    const currentEnergy = this.batteryState.get();
-
-    // Only grant energy if below 100 (auto-refill cap)
-    if (currentEnergy >= 100) {
-      console.log('Energy already at or above 100, no auto-refill needed');
-      return 0;
-    }
-
-    // Get last grant hour from localStorage (fallback to current time if not set)
-    const lastGrantHour = this.lastEnergyGrantHour.get() || Date.now();
-    const currentTime = Date.now();
-
-    // Calculate how many full hours have passed
-    const lastHourDate = new Date(lastGrantHour);
-    const currentHourDate = new Date(currentTime);
-
-    // Truncate to hour boundaries (e.g., 10:45 becomes 10:00)
-    lastHourDate.setMinutes(0, 0, 0);
-    currentHourDate.setMinutes(0, 0, 0);
-
-    // Calculate hours difference
-    const hoursDiff = Math.floor((currentHourDate - lastHourDate) / (1000 * 60 * 60));
-
-    if (hoursDiff > 0) {
-      // Grant 5 energy per hour
-      const energyToGrant = hoursDiff * 5;
-
-      // Cap at 100 maximum
-      const newEnergy = Math.min(currentEnergy + energyToGrant, 100);
-      const actualGranted = newEnergy - currentEnergy;
-
-      // Update energy state
-      this.batteryState.set(newEnergy);
-
-      // Update last grant hour to current hour
-      this.lastEnergyGrantHour.set(currentHourDate.getTime());
-
-      console.log(`Hourly energy grants: +${actualGranted} energy (${hoursDiff} hours passed)`);
-
-      return actualGranted;
-    }
-
-    return 0;
-  }
+  // Hourly energy grants are computed SERVER-SIDE (apply_sync, server time).
+  // The client just triggers a flush when the server-provided grant time
+  // passes; the response carries granted_energy for the UI.
 
   setupOrientationHandling() {
     // Game canvas is locked to portrait dimensions
@@ -681,15 +665,15 @@ export default class MainScene extends Phaser.Scene {
         } else {
           this.sound.setMute(true);
         }
-        // Save settings to database when toggled
-        this.saveStatsToSupabase();
+        // Sync settings to the server when toggled
+        this.flushSync();
       },
       onHapticToggle: (enabled) => {
         console.log('Haptic toggle:', enabled);
         // Haptic feedback is automatically handled in the modal component
         // based on the hapticEnabled state
-        // Save settings to database when toggled
-        this.saveStatsToSupabase();
+        // Sync settings to the server when toggled
+        this.flushSync();
       }
     });
     this.add.existing(this.settingsModal);
@@ -722,6 +706,10 @@ export default class MainScene extends Phaser.Scene {
       onSettingsClick: () => {
         this.settingsModal.show();
       },
+      onAvatarClick: () => {
+        this.sound.play('button_sound');
+        this.leaderboardModal.show();
+      },
       statusBarY: 30 // Pass Y position for HTML avatar positioning
     });
 
@@ -748,8 +736,9 @@ export default class MainScene extends Phaser.Scene {
     const currentEnergy = this.batteryState.get();
     this.energyCountdownTimer.setVisible(currentEnergy < 100);
 
-    // Battery bar removed - energy now shown in status bar
-    // this.createBatteryBar();
+    // Daily leaderboard modal — opened by tapping the player avatar
+    this.leaderboardModal = new LeaderboardModal(this);
+    this.add.existing(this.leaderboardModal);
   }
 
   applyLoadedSettings() {
@@ -793,74 +782,11 @@ export default class MainScene extends Phaser.Scene {
     const barHeight = 100; // Increased height for better spacing
     const menuY = screenHeight - (barHeight / 2); // Position so bottom edge is at screen bottom
 
-    // Get current notification states from persistent storage
-    const notifState = this.tabNotificationsState.get();
-
-    // Create bottom tab menu with 5 tabs
+    // Tab definitions + navigation live in src/config/tabs.js (shared
+    // with every satellite scene)
     this.bottomTabMenu = new BottomTabMenu(this, centerX, menuY, {
-      activeTab: 'main', // Set main as the default active tab
-      tabs: [
-        {
-          key: 'main',
-          icon: 'icon_heart',
-          label: 'MAIN',
-          showNotification: notifState.main.show,
-          notificationText: notifState.main.text,
-          onTap: (key) => {
-            console.log(`${key} tab tapped`);
-            // Already in MainScene, so just log for now
-          }
-        },
-        {
-          key: 'stickers',
-          icon: 'icon_picture',
-          label: 'STICKERS',
-          showNotification: notifState.stickers.show,
-          notificationText: notifState.stickers.text,
-          onTap: (key) => {
-            console.log(`${key} tab tapped`);
-            // TODO: Navigate to StickersScene when created
-            // this.scene.start('StickersScene');
-          }
-        },
-        {
-          key: 'wheel',
-          icon: 'icon_setting',
-          label: 'WHEEL',
-          showNotification: notifState.wheel.show,
-          notificationText: notifState.wheel.text,
-          onTap: (key) => {
-            console.log(`${key} tab tapped`);
-            // TODO: Navigate to WheelScene when created
-            // this.scene.start('WheelScene');
-          }
-        },
-        {
-          key: 'earn',
-          icon: 'icon_gold',
-          label: 'EARN',
-          showNotification: notifState.earn.show,
-          notificationText: notifState.earn.text,
-          onTap: (key) => {
-            console.log(`${key} tab tapped`);
-            // TODO: Navigate to EarnScene when created
-            // this.scene.start('EarnScene');
-          }
-        },
-        {
-          key: 'shop',
-          icon: 'icon_shop',
-          iconSize: 38, // Make shop icon larger (256px asset needs more size)
-          label: 'SHOP',
-          showNotification: notifState.shop.show,
-          notificationText: notifState.shop.text,
-          onTap: (key) => {
-            console.log(`${key} tab tapped`);
-            // TODO: Navigate to ShopScene when created
-            // this.scene.start('ShopScene');
-          }
-        }
-      ]
+      activeTab: 'main',
+      tabs: buildTabs(this)
     });
 
     this.add.existing(this.bottomTabMenu);
@@ -877,24 +803,12 @@ export default class MainScene extends Phaser.Scene {
    * @param {string|null} text - Optional text to display in badge (e.g., 'NEW')
    */
   setTabNotification(tabKey, show, text = null) {
-    // Get current state
-    const notifState = this.tabNotificationsState.get();
+    // Persisted via the shared tabs config helper
+    setTabNotification(tabKey, show, text);
 
-    // Update the specified tab
-    if (notifState[tabKey] !== undefined) {
-      notifState[tabKey] = { show, text };
-
-      // Persist to localStorage
-      this.tabNotificationsState.set(notifState);
-
-      // Update the visual notification badge if menu exists
-      if (this.bottomTabMenu) {
-        this.bottomTabMenu.setNotification(tabKey, show, text);
-      }
-
-      console.log(`Tab notification updated: ${tabKey} - show: ${show}, text: ${text}`);
-    } else {
-      console.warn(`Invalid tab key: ${tabKey}`);
+    // Update the visual notification badge if menu exists
+    if (this.bottomTabMenu) {
+      this.bottomTabMenu.setNotification(tabKey, show, text);
     }
   }
 
@@ -908,289 +822,260 @@ export default class MainScene extends Phaser.Scene {
           id: initData.user.id,
           username: initData.user.username || initData.user.first_name,
           first_name: initData.user.first_name,
-          last_name: initData.user.last_name,
-          auth_date: initData.auth_date,
-          hash: initData.hash
+          last_name: initData.user.last_name
         };
-
-        console.log('Telegram user authenticated:', this.telegramUser);
-
-        // Verify Telegram auth data
-        // SECURITY NOTE: In production, this verification MUST be done on the backend
-        // The hash should be verified using your bot token as the secret key
-        // This is just a placeholder to show where verification would occur
-        this.verifyTelegramAuth(window.Telegram.WebApp.initData);
+        console.log('Telegram user (display data):', this.telegramUser);
+        // NOTE: this data is untrusted. The Worker verifies the signed
+        // initData string (HMAC) on every API call — see server/middleware/auth.ts
       }
     } else {
       console.warn('Not running in Telegram WebApp or no user data available');
-      // For development: create mock user
+      // For development: mock user (server accepts it only with DEV_ALLOW_MOCK=1)
       this.telegramUser = {
         id: 123456789,
         username: 'dev_user',
-        first_name: 'Dev',
-        auth_date: Math.floor(Date.now() / 1000),
-        hash: 'dev_hash'
+        first_name: 'Dev'
       };
     }
-  }
-
-  verifyTelegramAuth(initData) {
-    // CRITICAL SECURITY NOTE:
-    // This is a CLIENT-SIDE placeholder for demonstration purposes only
-    // In a production application, you MUST verify the Telegram auth data on your backend server
-    //
-    // Backend verification steps (DO THIS ON YOUR SERVER):
-    // 1. Parse the initData query string
-    // 2. Extract all fields except 'hash'
-    // 3. Sort fields alphabetically and create data_check_string
-    // 4. Calculate HMAC-SHA256 using your bot token as secret key
-    // 5. Compare the calculated hash with the provided hash
-    // 6. Check that auth_date is recent (e.g., within last 24 hours)
-    //
-    // Example backend (Node.js):
-    // const crypto = require('crypto');
-    // const secret = crypto.createHmac('sha256', 'WebAppData').update(BOT_TOKEN).digest();
-    // const hash = crypto.createHmac('sha256', secret).update(data_check_string).digest('hex');
-    // if (hash !== receivedHash) throw new Error('Invalid hash');
-
-    console.log('⚠️  TODO: Implement backend verification for Telegram auth data');
-    console.log('Init data received:', initData);
-
-    // Return true for development, but always verify on backend in production
-    return true;
   }
 
   async initializeUser() {
-    if (!this.supabase || !this.telegramUser) {
-      console.warn('Missing Supabase or Telegram user data, skipping user initialization');
-      return;
-    }
-
     try {
-      // Get Telegram photo URL if available
-      let photoUrl = null;
-      if (window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) {
-        photoUrl = window.Telegram.WebApp.initDataUnsafe.user.photo_url;
-      }
+      const res = await api.auth();
+      this.applyServerState(res, { initial: true });
+      console.log('Authenticated with server, stats loaded');
+    } catch (error) {
+      console.error('Failed to authenticate with server:', error);
+      console.log('Continuing with localStorage values as fallback');
+      // Don't throw - game stays playable offline; sync retries later
+    }
+  }
 
-      // Step 1: Upsert user to users table (creates if new, updates if exists)
-      const userData = {
-        telegram_id: this.telegramUser.id,
-        username: this.telegramUser.username,
-        profile_photo_url: photoUrl,
-        wallet_address: this.walletAddress || null
-      };
-
-      console.log('Initializing user in database:', userData);
-
-      const { data: user, error: userError } = await this.supabase
-        .from('users')
-        .upsert(userData, {
-          onConflict: 'telegram_id',
-          ignoreDuplicates: false
-        })
-        .select()
-        .single();
-
-      if (userError) {
-        throw userError;
-      }
-
-      console.log('User initialized successfully:', user);
-
-      // Step 2: Load user stats from user_stats table
-      const { data: stats, error: statsError } = await this.supabase
-        .from('user_stats')
-        .select('*')
-        .eq('telegram_id', this.telegramUser.id)
-        .single();
-
-      if (statsError && statsError.code !== 'PGRST116') {
-        // PGRST116 = no rows returned, which is expected for new users
-        throw statsError;
-      }
-
-      if (stats) {
-        // User has existing stats - load them into the game
-        console.log('Loading existing stats from database:', stats);
-        console.log('Database energy value:', stats.energy);
-
-        this.coinsState.set(stats.coins || 0);
-        this.ticketsState.set(stats.tickets || 0);
-        this.gemsState.set(stats.gems || 0);
-        // Use ?? instead of || to properly handle 0 values
-        this.batteryState.set(stats.energy ?? 100);
-        this.userLevelState.set(stats.user_level || 1);
-        this.totalChestsOpenedState.set(stats.total_chests_opened || 0);
-
-        // Load settings from database (use ?? to properly handle boolean values)
-        // Database is authoritative - override localStorage if different
-        const soundEnabled = stats.sound_enabled ?? true;
-        const hapticEnabled = stats.haptic_enabled ?? true;
-
-        // Store settings for later application (after scene is fully created)
-        this.loadedSoundEnabled = soundEnabled;
-        this.loadedHapticEnabled = hapticEnabled;
-
-        console.log('Settings loaded from database:', { soundEnabled, hapticEnabled });
-
-        // Load first-time events from database (JSONB field)
-        if (stats.first_time_events) {
-          this.firstTimeEvents = stats.first_time_events;
-          console.log('First-time events loaded:', this.firstTimeEvents);
-        } else {
-          // Default structure if not in database
-          console.log('No first_time_events in database, using defaults');
-        }
-
-        console.log('Energy loaded from database and set to:', this.batteryState.get());
-
-        // Calculate server-side hourly energy grants using last_energy_grant_hour
-        if (stats.last_energy_grant_hour && stats.energy < 100) {
-          const lastGrantHour = new Date(stats.last_energy_grant_hour);
-          const currentTime = new Date();
-
-          // Truncate to hour boundaries
-          lastGrantHour.setMinutes(0, 0, 0);
-          currentTime.setMinutes(0, 0, 0);
-
-          // Calculate hours difference
-          const hoursDiff = Math.floor((currentTime - lastGrantHour) / (1000 * 60 * 60));
-
-          if (hoursDiff > 0) {
-            // Grant 5 energy per hour, cap at 100
-            const energyToGrant = hoursDiff * 5;
-            const newEnergy = Math.min(stats.energy + energyToGrant, 100);
-            const actualGranted = newEnergy - stats.energy;
-
-            if (actualGranted > 0) {
-              console.log(`Server-calculated hourly grants: +${actualGranted} energy (${hoursDiff} hours passed)`);
-              this.batteryState.set(newEnergy);
-              this.offlineEnergyGained = actualGranted;
-
-              // Update last grant hour in localStorage
-              this.lastEnergyGrantHour.set(currentTime.getTime());
-            }
-          }
-        }
-
-        console.log('Stats loaded successfully from database');
-      } else {
-        // New user - create initial stats row using localStorage defaults
-        console.log('New user detected, creating initial stats row');
-
-        // Default settings for new users
+  /**
+   * Reconcile local state with the authoritative server response.
+   * On initial load the server values are applied directly. Mid-play,
+   * un-flushed deltas in the sync buffer are layered on top so the UI
+   * never visibly "rolls back" rewards the player just earned.
+   */
+  applyServerState(res, { initial = false } = {}) {
+    if (!res || !res.stats) {
+      // Mock/offline response - keep local values
+      if (initial) {
         this.loadedSoundEnabled = true;
         this.loadedHapticEnabled = true;
-
-        const initialStats = {
-          telegram_id: this.telegramUser.id,
-          coins: this.coinsState.get(),
-          tickets: this.ticketsState.get(),
-          gems: this.gemsState.get(),
-          energy: this.batteryState.get(),
-          user_level: this.userLevelState.get(),
-          total_chests_opened: this.totalChestsOpenedState.get(),
-          last_energy_update: new Date().toISOString(),
-          first_time_events: this.firstTimeEvents, // Include first-time events for new users
-          sound_enabled: true,
-          haptic_enabled: true
-        };
-
-        const { data: newStats, error: createError } = await this.supabase
-          .from('user_stats')
-          .insert(initialStats)
-          .select()
-          .single();
-
-        if (createError) {
-          throw createError;
-        }
-
-        console.log('Initial stats created successfully:', newStats);
       }
-
-    } catch (error) {
-      console.error('Failed to initialize user:', error);
-      console.log('Continuing with localStorage values as fallback');
-      // Don't throw - game should continue with localStorage values
-    }
-  }
-
-  async saveStatsToSupabase() {
-    if (!this.supabase || !this.telegramUser) {
-      console.warn('Missing Supabase or Telegram user data, skipping stats save');
       return;
     }
 
-    try {
-      // Convert lastEnergyGrantHour timestamp to ISO string for database
-      const lastGrantHourTimestamp = this.lastEnergyGrantHour.get();
-      const lastGrantHourISO = new Date(lastGrantHourTimestamp).toISOString();
+    const s = res.stats;
+    const b = this.syncBuffer;
+    const paidChests = Math.max(b.chests_opened - b.auto_pop_chests, 0);
 
-      // Get current settings from the settings modal (if it exists)
-      let soundEnabled = true;
-      let hapticEnabled = true;
-      if (this.settingsModal) {
-        soundEnabled = this.settingsModal.soundEnabledState.get();
-        hapticEnabled = this.settingsModal.hapticEnabledState.get();
+    const coins = (s.coins ?? 0) + b.coins_earned;
+    const gems = (s.gems ?? 0) + b.gems_earned;
+    const energy = Math.max((s.energy ?? 100) + b.energy_collected - paidChests, 0);
+    const chests = (s.total_chests_opened ?? 0) + b.chests_opened;
+    const xp = (s.xp ?? 0) + b.xp_earned;
+
+    this.coinsState.set(coins);
+    this.ticketsState.set(s.tickets ?? 0);
+    this.gemsState.set(gems);
+    this.batteryState.set(energy);
+    this.xpState.set(xp);
+    this.userLevelState.set(Math.max(s.user_level || 1, levelFromXp(xp)));
+    this.totalChestsOpenedState.set(chests);
+    if (typeof s.sticker_packs === 'number') gameState.stickerPacks.set(s.sticker_packs);
+    if (typeof s.auto_pops === 'number') gameState.autoPops.set(s.auto_pops);
+
+    // First-time flags: server state + anything set locally since last flush
+    this.firstTimeEvents = {
+      ...(s.first_time_events || this.firstTimeEvents),
+      ...this.pendingFirstTimeEvents
+    };
+
+    if (res.next_grant_at) {
+      this.nextGrantAt = new Date(res.next_grant_at).getTime();
+    }
+
+    if (initial) {
+      this.loadedSoundEnabled = s.sound_enabled ?? true;
+      this.loadedHapticEnabled = s.haptic_enabled ?? true;
+      if (res.granted_energy > 0) {
+        this.offlineEnergyGained = res.granted_energy;
       }
-
-      const statsData = {
-        telegram_id: this.telegramUser.id,
-        coins: this.coinsState.get(),
-        tickets: this.ticketsState.get(),
-        gems: this.gemsState.get(),
-        energy: this.batteryState.get(),
-        user_level: this.userLevelState.get(),
-        total_chests_opened: this.totalChestsOpenedState.get(),
-        last_energy_update: new Date().toISOString(),
-        last_energy_grant_hour: lastGrantHourISO,
-        first_time_events: this.firstTimeEvents, // Persist first-time events to database
-        sound_enabled: soundEnabled,
-        haptic_enabled: hapticEnabled
-      };
-
-      const { error } = await this.supabase
-        .from('user_stats')
-        .upsert(statsData, {
-          onConflict: 'telegram_id',
-          ignoreDuplicates: false
-        });
-
-      if (error) {
-        throw error;
+    } else {
+      // Mid-play reconcile: refresh the visible pills
+      if (this.statusBar) {
+        this.statusBar.setResource('coins', coins, false);
+        this.statusBar.setResource('gems', gems, false);
+        this.statusBar.setResource('energy', energy, false);
+        this.statusBar.setLevel(s.user_level || 1);
       }
-
-      console.log('Stats saved to Supabase:', statsData);
-
-    } catch (error) {
-      console.error('Failed to save stats to Supabase:', error);
-      // Don't throw - localStorage backup still exists
+      this.updateEnergyTimerVisibility();
+      if (res.granted_energy > 0) {
+        this.showOfflineRegenNotification(res.granted_energy);
+      }
+      if (res.clamped) {
+        console.warn('Server clamped last sync batch (values corrected)');
+      }
     }
   }
 
-  startAutoSave() {
-    // Save stats to Supabase every 5 seconds
+  /**
+   * Add XP and handle level-ups. The server runs the same curve and
+   * grants the same rewards authoritatively (grant_level_rewards);
+   * this local version keeps the UI instant.
+   */
+  gainXp(amount) {
+    const newXp = this.xpState.get() + amount;
+    this.xpState.set(newXp);
+
+    const oldLevel = this.userLevelState.get();
+    const newLevel = levelFromXp(newXp);
+    if (newLevel > oldLevel) {
+      this.handleLevelUp(oldLevel, newLevel);
+    }
+  }
+
+  handleLevelUp(oldLevel, newLevel) {
+    this.userLevelState.set(newLevel);
+    if (this.statusBar) this.statusBar.setLevel(newLevel);
+
+    // Apply rewards optimistically (server grants the same amounts —
+    // reconciliation keeps them consistent)
+    let tickets = 0;
+    let packs = 0;
+    for (let lvl = oldLevel + 1; lvl <= newLevel; lvl++) {
+      const rewards = levelUpRewards(lvl);
+      tickets += rewards.tickets;
+      packs += rewards.stickerPacks;
+    }
+    if (this.batteryState.get() < 100) {
+      this.batteryState.set(100);
+      this.statusBar?.setResource('energy', 100, true);
+      this.updateEnergyTimerVisibility();
+    }
+    this.ticketsState.add(tickets);
+    if (packs > 0) gameState.stickerPacks.add(packs);
+
+    const rewardRows = [
+      { icon: 'statusbar_energy', amount: 100, label: 'Energy refill' },
+      { icon: 'statusbar_ticket', amount: tickets, label: 'Tickets' }
+    ];
+    if (packs > 0) {
+      rewardRows.push({ icon: 'icon_picture', amount: packs, label: 'Sticker Pack' });
+    }
+
+    RewardCelebration.show(this, {
+      title: `LEVEL ${newLevel}!`,
+      rewards: rewardRows
+    });
+
+    // New level also means bigger chest payouts — worth telling the player
+    const bonusPct = Math.round((coinMultiplier(newLevel) - 1) * 100);
+    this.showSuccess(`Chest coins +${bonusPct}% at level ${newLevel}!`);
+
+    this.flushSync();
+  }
+
+  /**
+   * Flush accumulated gameplay deltas to the Worker. The server validates
+   * the batch (energy accounting, rate caps, reward envelopes), applies
+   * hourly grants, and returns authoritative stats for reconciliation.
+   */
+  async flushSync() {
+    if (this.syncInFlight) {
+      this.syncPending = true;
+      return;
+    }
+
+    const buffer = this.syncBuffer;
+    const firstTime = this.pendingFirstTimeEvents;
+    this.syncBuffer = this.createEmptySyncBuffer();
+    this.pendingFirstTimeEvents = {};
+
+    const payload = this.buildSyncPayload(buffer, firstTime);
+    this.lastFlushTime = Date.now();
+    this.syncInFlight = true;
+
+    try {
+      const res = await api.sync(payload);
+      this.applyServerState(res);
+    } catch (error) {
+      console.error('Sync failed, re-queueing deltas:', error);
+      this.mergeBufferBack(buffer, firstTime);
+    } finally {
+      this.syncInFlight = false;
+      if (this.syncPending) {
+        this.syncPending = false;
+        this.flushSync();
+      }
+    }
+  }
+
+  buildSyncPayload(buffer, firstTime) {
+    let soundEnabled;
+    let hapticEnabled;
+    if (this.settingsModal) {
+      soundEnabled = this.settingsModal.soundEnabledState.get();
+      hapticEnabled = this.settingsModal.hapticEnabledState.get();
+    }
+    return {
+      ...buffer,
+      elapsed_ms: Math.max(Date.now() - this.lastFlushTime, 0),
+      sound_enabled: soundEnabled,
+      haptic_enabled: hapticEnabled,
+      first_time_events: Object.keys(firstTime).length > 0 ? firstTime : undefined
+    };
+  }
+
+  /** Re-queue deltas from a failed flush so nothing is lost. */
+  mergeBufferBack(buffer, firstTime) {
+    const b = this.syncBuffer;
+    for (const key of Object.keys(buffer)) {
+      b[key] += buffer[key];
+    }
+    this.pendingFirstTimeEvents = { ...firstTime, ...this.pendingFirstTimeEvents };
+  }
+
+  startSyncLoop() {
+    // Flush deltas every 10 seconds (skip when idle — hourly-grant flushes
+    // are triggered separately by the countdown timer)
     this.autoSaveTimer = this.time.addEvent({
-      delay: 5000, // 5 seconds
+      delay: 10000,
       callback: () => {
-        this.saveStatsToSupabase();
+        if (this.bufferHasDeltas()) this.flushSync();
       },
       loop: true
     });
 
-    // Also save when scene shuts down (user closes game)
-    this.events.once('shutdown', () => {
-      console.log('Scene shutting down, saving final stats...');
-      this.saveStatsToSupabase();
-    });
+    // Flush when the scene shuts down or is destroyed
+    this.events.once('shutdown', () => this.flushSyncBeacon());
+    this.events.once('destroy', () => this.flushSyncBeacon());
 
-    // Also save when scene is destroyed
+    // Flush when the tab/app is hidden (sendBeacon survives close)
+    this.pageHideHandler = () => {
+      if (document.visibilityState === 'hidden') {
+        this.flushSyncBeacon();
+      }
+    };
+    document.addEventListener('visibilitychange', this.pageHideHandler);
+    window.addEventListener('pagehide', this.pageHideHandler);
     this.events.once('destroy', () => {
-      console.log('Scene destroyed, saving final stats...');
-      this.saveStatsToSupabase();
+      document.removeEventListener('visibilitychange', this.pageHideHandler);
+      window.removeEventListener('pagehide', this.pageHideHandler);
     });
+  }
+
+  /** Fire-and-forget flush for page-hide/shutdown moments. */
+  flushSyncBeacon() {
+    if (!this.bufferHasDeltas()) return;
+    const buffer = this.syncBuffer;
+    const firstTime = this.pendingFirstTimeEvents;
+    this.syncBuffer = this.createEmptySyncBuffer();
+    this.pendingFirstTimeEvents = {};
+    api.syncBeacon(this.buildSyncPayload(buffer, firstTime));
+    this.lastFlushTime = Date.now();
   }
 
   startEnergyCountdownUpdate() {
@@ -1198,17 +1083,12 @@ export default class MainScene extends Phaser.Scene {
     this.countdownUpdateTimer = this.time.addEvent({
       delay: 1000, // 1 second
       callback: () => {
-        // Check for hourly energy grants (grants 5 energy per hour)
-        const energyGranted = this.calculateHourlyEnergyGrants();
-
-        if (energyGranted > 0) {
-          // Update UI with new energy amount
-          const newEnergy = this.batteryState.get();
-          this.statusBar.setResource('energy', newEnergy, true);
-          this.updateEnergyTimerVisibility();
-
-          // Show notification or visual feedback
-          console.log(`You received ${energyGranted} free energy!`);
+        // Hourly grants are server-side: when the server-provided grant
+        // time passes, flush a sync — the response applies the grant and
+        // shows the "+N energy" notification via applyServerState()
+        if (this.nextGrantAt && Date.now() >= this.nextGrantAt && !this.syncInFlight) {
+          this.nextGrantAt = null; // reset until server sends the next one
+          this.flushSync();
         }
 
         // Update countdown timer display
@@ -1303,8 +1183,11 @@ export default class MainScene extends Phaser.Scene {
     // Check if battery is too low (stop at 0/100)
     const currentBattery = this.batteryState.get();
     if (currentBattery <= 0) {
-      console.log('Battery too low! Need more than 0 energy to open chest.');
-      // TODO: Show "Low Energy" message to user
+      // Low energy: nudge the player toward the free refill sources
+      this.showError('Out of energy! Get more from EARN tasks or the wheel ⚡');
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.notificationOccurred('warning');
+      }
       return;
     }
 
@@ -1350,12 +1233,14 @@ export default class MainScene extends Phaser.Scene {
     // Update energy countdown timer visibility
     this.updateEnergyTimerVisibility();
 
-    // Update timestamp for offline regeneration tracking
-    this.lastBatteryUpdateTime.set(Date.now());
-
     // Increment total chests opened counter
     const chestsOpened = this.totalChestsOpenedState.get();
     this.totalChestsOpenedState.set(chestsOpened + 1);
+
+    // Record delta for the next server sync (1 chest = 1 XP)
+    this.syncBuffer.chests_opened++;
+    this.syncBuffer.xp_earned++;
+    this.gainXp(1);
 
     // Note: startUISlideBackMonitoring() is now called AFTER confetti spawns
     // to prevent race condition where monitoring checks empty Set before confetti exists
@@ -1367,25 +1252,30 @@ export default class MainScene extends Phaser.Scene {
     const rand = Math.random();
     let coinReward, isMegaJackpot = false, isBigPayout = false;
 
+    // Coin payouts scale with player level (+10% per level) — leveling
+    // up makes every chest richer. Server envelope matches (apply_sync).
+    const playerLevel = this.userLevelState.get();
+
     if (guaranteedJackpot) {
       // 🎰 GUARANTEED MEGA JACKPOT (first-time experience at energy ≤ 10)
       isMegaJackpot = true;
-      coinReward = 5000; // Fixed 5,000 coins for guaranteed jackpot
+      coinReward = scaleCoins(5000, playerLevel);
 
-      // Mark as used in database
+      // Mark as used (synced to server on next flush; only false->true allowed)
       this.firstTimeEvents.guaranteed_mega_jackpot = true;
+      this.pendingFirstTimeEvents.guaranteed_mega_jackpot = true;
       console.log('First-time mega jackpot flag set to true');
     } else if (rand < 0.005) {
-      // 0.8% mega jackpot (normal probability)
+      // 0.5% mega jackpot (normal probability)
       isMegaJackpot = true;
-      coinReward = Phaser.Utils.Array.GetRandom([3000, 4000, 5000]);
+      coinReward = scaleCoins(Phaser.Utils.Array.GetRandom([3000, 4000, 5000]), playerLevel);
     } else if (rand < 0.20) {
       // 20% big payout
       isBigPayout = true;
-      coinReward = Phaser.Utils.Array.GetRandom([50, 75, 100, 125, 150]);
+      coinReward = scaleCoins(Phaser.Utils.Array.GetRandom([50, 75, 100, 125, 150]), playerLevel);
     } else {
       // 80% normal payout
-      coinReward = Phaser.Math.Between(3, 49);
+      coinReward = scaleCoins(Phaser.Math.Between(3, 49), playerLevel);
     }
 
     // Determine if emerald reward should spawn (10% chance for non-mega jackpots)
@@ -1412,12 +1302,15 @@ export default class MainScene extends Phaser.Scene {
       // Using frame 27 for a more open chest
       this.player.setTexture('chest_0027');
 
+      // Record the jackpot delta for the next sync
+      this.syncBuffer.mega_jackpots++;
+
       // Start streaming mega jackpot immediately
       this.streamMegaJackpotCoins(coinReward);
     } else {
       // Normal/big payout flow
       // Play treasure chest sound (different sound for big payouts)
-      this.sound.play(isBigPayout ? 'chest_sound' : 'chest_sound_big');
+      this.sound.play(isBigPayout ? 'chest_sound_big' : 'chest_sound');
 
       // Restart chest opening animation (restarts if already playing)
       this.player.play('chest_open', true);
@@ -1458,8 +1351,11 @@ export default class MainScene extends Phaser.Scene {
       });
     }
 
-    // Immediately save stats to Supabase after chest open (don't wait for auto-save)
-    this.saveStatsToSupabase();
+    // Flush immediately on the important moments; otherwise the 10s
+    // sync loop picks the deltas up
+    if (isMegaJackpot || newBattery <= 0) {
+      this.flushSync();
+    }
   }
 
   createCoinConfetti(coinAmount, isBigPayout = false, skipTotalUpdate = false) {
@@ -1572,6 +1468,7 @@ export default class MainScene extends Phaser.Scene {
       const currentCoins = this.coinsState.get();
       const newTotal = currentCoins + coinAmount;
       this.coinsState.set(newTotal);
+      this.syncBuffer.coins_earned += coinAmount;
 
       // Update StatusBar with animation
       this.statusBar.setResource('coins', newTotal, true);
@@ -1670,6 +1567,7 @@ export default class MainScene extends Phaser.Scene {
       const currentGems = this.gemsState.get();
       const newTotal = currentGems + 1;
       this.gemsState.set(newTotal);
+      this.syncBuffer.gems_earned += 1;
 
       // Update StatusBar with animation
       this.statusBar.setResource('gems', newTotal, true);
@@ -1858,6 +1756,7 @@ export default class MainScene extends Phaser.Scene {
       const currentEnergy = this.batteryState.get();
       const newTotal = currentEnergy + 1;
       this.batteryState.set(newTotal);
+      this.syncBuffer.energy_collected += 1;
 
       // Update StatusBar energy display (even if over 100)
       this.statusBar.setResource('energy', newTotal, true);
@@ -2045,6 +1944,9 @@ export default class MainScene extends Phaser.Scene {
       if (window.Telegram?.WebApp?.HapticFeedback) {
         window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
       }
+
+      // Record the collected auto-pop for the next sync
+      this.syncBuffer.auto_pops_collected++;
 
       // Start Auto Pop sequence
       this.startAutoPopSequence();
@@ -2290,18 +2192,26 @@ export default class MainScene extends Phaser.Scene {
     const chestsOpened = this.totalChestsOpenedState.get();
     this.totalChestsOpenedState.set(chestsOpened + 1);
 
-    // Determine payout size (same probability as normal)
+    // Record deltas: auto-pop chests are free (no energy) — the server
+    // validates them against collected auto-pops (10 opens each)
+    this.syncBuffer.chests_opened++;
+    this.syncBuffer.auto_pop_chests++;
+    this.syncBuffer.xp_earned++;
+    this.gainXp(1);
+
+    // Determine payout size (same probability as normal, level-scaled)
     const rand = Math.random();
+    const playerLevel = this.userLevelState.get();
     let coinReward, isBigPayout = false;
 
     // NOTE: Mega jackpot disabled during auto-pop (too disruptive)
     if (rand < 0.10) {
       // 10% big payout
       isBigPayout = true;
-      coinReward = Phaser.Utils.Array.GetRandom([75, 100, 125, 150]);
+      coinReward = scaleCoins(Phaser.Utils.Array.GetRandom([75, 100, 125, 150]), playerLevel);
     } else {
-      // 80% normal payout
-      coinReward = Phaser.Math.Between(3, 49);
+      // 90% normal payout
+      coinReward = scaleCoins(Phaser.Math.Between(3, 49), playerLevel);
     }
 
     // Determine if emerald reward should spawn (10% chance)
@@ -2314,7 +2224,7 @@ export default class MainScene extends Phaser.Scene {
     const isAutoPopReward = false;
 
     // Play chest sound
-    this.sound.play(isBigPayout ? 'chest_sound' : 'chest_sound_big');
+    this.sound.play(isBigPayout ? 'chest_sound_big' : 'chest_sound');
 
     // Play chest opening animation
     this.player.play('chest_open', true);
@@ -2354,10 +2264,7 @@ export default class MainScene extends Phaser.Scene {
       this.player.play('chest_close', true);
     });
 
-    // Save stats after every 3rd auto-pop to reduce database load
-    if (this.totalChestsOpenedState.get() % 3 === 0) {
-      this.saveStatsToSupabase();
-    }
+    // Deltas are picked up by the 10-second sync loop
   }
 
   /**
@@ -2463,11 +2370,13 @@ export default class MainScene extends Phaser.Scene {
       const currentEnergy = this.batteryState.get();
       const newEnergy = currentEnergy + bonusAmount;
       this.batteryState.set(newEnergy);
+      this.syncBuffer.energy_collected += bonusAmount;
       this.statusBar.setResource('energy', newEnergy, true);
     } else if (itemType === 'gems') {
       const currentGems = this.gemsState.get();
       const newGems = currentGems + bonusAmount;
       this.gemsState.set(newGems);
+      this.syncBuffer.gems_earned += bonusAmount;
       this.statusBar.setResource('gems', newGems, true);
     }
 
@@ -2490,8 +2399,7 @@ export default class MainScene extends Phaser.Scene {
       window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
     }
 
-    // Save stats immediately after combo bonus
-    this.saveStatsToSupabase();
+    // Deltas are picked up by the sync loop
   }
 
   /**
@@ -2636,6 +2544,7 @@ export default class MainScene extends Phaser.Scene {
         const currentCoins = this.coinsState.get();
         const newTotal = currentCoins + coinsPerBurst;
         this.coinsState.set(newTotal);
+        this.syncBuffer.coins_earned += coinsPerBurst;
 
         // Update StatusBar with animation
         this.statusBar.setResource('coins', newTotal, true);
@@ -2701,6 +2610,7 @@ export default class MainScene extends Phaser.Scene {
       });
     }
 
+
     // Slide BottomTabMenu down (out of screen at bottom)
     if (this.bottomTabMenu) {
       const screenHeight = this.cameras.main.height;
@@ -2734,6 +2644,7 @@ export default class MainScene extends Phaser.Scene {
         ease: 'Power2.easeOut'
       });
     }
+
 
     // Slide BottomTabMenu up (back to original position at bottom)
     if (this.bottomTabMenu) {
@@ -2790,8 +2701,10 @@ export default class MainScene extends Phaser.Scene {
       const shortAddress = this.walletAddress.slice(0, 6) + '...' + this.walletAddress.slice(-4);
       this.walletText.setText(`Wallet: ${shortAddress}`);
 
-      // Save user data to Supabase
-      await this.saveUserToSupabase();
+      // Save wallet address via the Worker (address is display-only until
+      // ton_proof verification is added — never gate real value on it)
+      await api.saveWallet(this.walletAddress);
+      this.showSuccess('Profile saved!');
 
     } catch (error) {
       console.error('Error handling wallet connection:', error);
@@ -2803,58 +2716,6 @@ export default class MainScene extends Phaser.Scene {
     this.walletAddress = null;
     this.walletText.setText('');
     console.log('Wallet disconnected');
-  }
-
-  async saveUserToSupabase() {
-    if (!this.supabase || !this.telegramUser || !this.walletAddress) {
-      console.warn('Missing data for Supabase upsert');
-      return;
-    }
-
-    try {
-      // SECURITY NOTE: In production, this operation should be done on the backend
-      // after verifying the Telegram authentication and wallet signature
-      // Backend should:
-      // 1. Verify Telegram auth hash
-      // 2. Verify wallet ownership (optional: request signed message)
-      // 3. Then perform database operations
-
-      const userData = {
-        telegram_id: this.telegramUser.id,
-        username: this.telegramUser.username,
-        wallet_address: this.walletAddress,
-        // high_score will use default value of 0 if not provided
-      };
-
-      console.log('Saving user to Supabase:', userData);
-
-      const { data, error } = await this.supabase
-        .from('users')
-        .upsert(userData, {
-          onConflict: 'telegram_id',
-          ignoreDuplicates: false
-        })
-        .select();
-
-      if (error) {
-        throw error;
-      }
-
-      console.log('User saved successfully:', data);
-      this.showSuccess('Profile saved!');
-
-      // TODO: Backend should handle this insert after verification
-      // Example backend flow:
-      // 1. Client sends: { telegramInitData, walletAddress, signedMessage }
-      // 2. Server verifies Telegram hash
-      // 3. Server verifies wallet signature (optional but recommended)
-      // 4. Server performs database upsert
-      // 5. Server returns success/failure
-
-    } catch (error) {
-      console.error('Failed to save user to Supabase:', error);
-      this.showError('Failed to save profile');
-    }
   }
 
   showError(message) {

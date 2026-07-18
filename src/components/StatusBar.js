@@ -45,7 +45,8 @@ export default class StatusBar extends Phaser.GameObjects.Container {
         { key: 'energy', icon: 'statusbar_energy', value: 0 },
         { key: 'gems', icon: 'statusbar_gem', value: 0 }
       ],
-      onSettingsClick: config.onSettingsClick || (() => console.log('Settings clicked'))
+      onSettingsClick: config.onSettingsClick || (() => console.log('Settings clicked')),
+      onAvatarClick: config.onAvatarClick || null
     };
 
     // Resource value storage
@@ -86,6 +87,13 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     this.avatarImage = this.scene.add.image(avatarX, avatarY, textureToUse);
     this.avatarImage.setDisplaySize(42, 42); // Smaller avatar
     this.avatarImage.setOrigin(0.5);
+
+    // Optional tap handler (e.g. open profile/XP modal). The frame is
+    // the tap target since the HTML photo overlay ignores pointer events.
+    if (this.config.onAvatarClick) {
+      this.avatarFrame.setInteractive({ useHandCursor: true });
+      this.avatarFrame.on('pointerdown', () => this.config.onAvatarClick());
+    }
 
     // Create circular mask for avatar using container-relative coordinates
     const maskShape = this.scene.make.graphics();
@@ -392,7 +400,36 @@ export default class StatusBar extends Phaser.GameObjects.Container {
     this.updateHtmlAvatarPosition();
 
     // Update position on window resize
-    this.scene.scale.on('resize', () => this.updateHtmlAvatarPosition());
+    this.resizeHandler = () => this.updateHtmlAvatarPosition();
+    this.scene.scale.on('resize', this.resizeHandler);
+
+    // The HTML overlay lives outside Phaser's display list, so keep it
+    // in lockstep with the scene lifecycle: hide while the scene sleeps
+    // (another tab scene is showing), remove when the scene ends.
+    this.sleepHandler = () => this.setHtmlAvatarVisible(false);
+    this.wakeHandler = () => this.setHtmlAvatarVisible(true);
+    this.scene.events.on('sleep', this.sleepHandler);
+    this.scene.events.on('wake', this.wakeHandler);
+    this.scene.events.once('shutdown', () => this.destroyHtmlAvatar());
+    this.scene.events.once('destroy', () => this.destroyHtmlAvatar());
+  }
+
+  setHtmlAvatarVisible(visible) {
+    if (this.htmlAvatarContainer) {
+      this.htmlAvatarContainer.style.display = visible ? 'block' : 'none';
+    }
+  }
+
+  destroyHtmlAvatar() {
+    if (this.htmlAvatarContainer && this.htmlAvatarContainer.parentNode) {
+      this.htmlAvatarContainer.parentNode.removeChild(this.htmlAvatarContainer);
+    }
+    this.htmlAvatarContainer = null;
+    if (this.scene) {
+      if (this.resizeHandler) this.scene.scale.off('resize', this.resizeHandler);
+      if (this.sleepHandler) this.scene.events.off('sleep', this.sleepHandler);
+      if (this.wakeHandler) this.scene.events.off('wake', this.wakeHandler);
+    }
   }
 
   /**

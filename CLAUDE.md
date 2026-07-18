@@ -4,7 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a Phaser 3 game boilerplate designed specifically for Telegram WebApp deployment with TON blockchain wallet integration and Supabase database backend. The project uses `@ton/phaser-sdk` for game-optimized blockchain integration and Vite for bundling.
+Phaser 3 chest-tapping game for Telegram Mini Apps, monetized with Telegram Stars,
+backed by a **Cloudflare Worker** (Hono) + Supabase (server-only). TON Connect is
+integrated for wallet display; Vite bundles the client.
 
 **Platform Target: Mobile Only**
 - This game is exclusively for Telegram mobile app (iOS/Android)
@@ -12,14 +14,63 @@ This is a Phaser 3 game boilerplate designed specifically for Telegram WebApp de
 - All UI elements, scenes, and interactions must be designed for touch input only
 - No desktop/landscape support required
 
+## Architecture v2 (Worker backend) — READ THIS FIRST
+
+⚠️ Sections further down describing direct client→Supabase writes are HISTORICAL.
+The current architecture (see `DEPLOYMENT.md`) is:
+
+- **One Cloudflare Worker** (`server/`, TypeScript + Hono) serves the built game
+  (`[assets]` binding → `dist/`) AND all API routes (`/api/*`) AND the Telegram
+  bot webhook (`/webhook`). Config: `wrangler.toml`; secrets via `wrangler secret`.
+- **Auth is stateless**: every API call carries `Authorization: tma <initData>`;
+  the Worker verifies the HMAC (WebAppData scheme) + `auth_date` freshness
+  (`server/middleware/auth.ts`). Local dev uses `tma mock:<id>` gated by
+  `DEV_ALLOW_MOCK=1` in `.dev.vars`.
+- **Supabase is server-only** (service-role key). RLS denies everything to the
+  anon key (`migrations/0001_lock_rls.sql`). The browser holds no Supabase code.
+- **Server-authoritative economy**: chest-tap deltas batch into `POST /api/sync`
+  every 10s; the `apply_sync` Postgres function (`migrations/0003_functions.sql`)
+  validates energy accounting, tap-rate caps, and reward envelopes — clamping
+  (not rejecting) impossible claims and logging them to `sync_audit`. Hourly
+  energy grants (+5/hour, cap 100) use SERVER time. Wheel spins, task claims,
+  purchases, sticker packs, and level rewards are fully server-rolled.
+- **Client sync layer** lives in `src/scenes/MainScene.js` (`syncBuffer`,
+  `flushSync`, `applyServerState`) + `src/utils/api.js` (fetch wrapper with a
+  dev mock fallback so the game runs offline).
+- **Scenes**: `MainScene` (chest tapping; sleeps/wakes) + satellite tabs that
+  start/stop fresh: `WheelScene`, `StickersScene`, `EarnScene`, `ShopScene`, all
+  extending `src/scenes/BaseTabScene.js`. Navigation: `src/config/tabs.js`.
+- **Cross-scene state**: `src/state/gameState.js` (registry-style, same
+  localStorage keys as before; server values reconcile into it).
+- **Progression**: XP/levels in `src/config/levels.js` (+ SQL `level_from_xp`);
+  chest coin payouts scale +10%/level (`scaleCoins`); level-ups grant energy
+  refill + tickets + a sticker pack every 5 levels (`grant_level_rewards`).
+- **Monetization**: Telegram Stars catalog in `server/config/products.ts`;
+  invoice via `createInvoiceLink` (currency XTR); crediting happens ONLY in the
+  webhook on `successful_payment`, idempotent on `telegram_payment_charge_id`
+  (`credit_purchase` SQL function).
+- **Stickers**: definitions in `shared/stickers.json` (single source for client
+  + server); rolls/ownership server-side (`server/routes/stickers.ts`).
+- **Daily leaderboard**: `leaderboard_daily(day, telegram_id, gems)` — new UTC
+  day = new rows (no cron); read via `get_leaderboard` RPC; UI is
+  `src/components/LeaderboardModal.js` + rank pill on MainScene.
+- **Earn**: tasks catalog `server/config/tasks.ts` (check-in streak, Adsgram
+  rewarded ads with server postback, referrals via `start_param` with 25-chest
+  qualification, social follows).
+
 ## Development Commands
 
 ```bash
 npm install              # Install dependencies
-npm run dev             # Start dev server (localhost:3000)
-npm run build           # Build for production (outputs to dist/)
-npm run preview         # Preview production build
+cp .dev.vars.example .dev.vars   # Worker secrets for local dev
+npm run dev              # vite (:3000, proxies /api) + wrangler dev (:8787)
+npm run build            # Build client for production (outputs to dist/)
+npm run typecheck        # Typecheck the Worker (server/)
+npm run deploy           # vite build && wrangler deploy
 ```
+
+Database migrations live in `migrations/` (run in order in the Supabase SQL
+editor). Deploy runbook: `DEPLOYMENT.md`.
 
 ## Architecture
 

@@ -1,0 +1,112 @@
+{
+  "packSize": 3,
+  "rarityWeights": { "1": 40, "2": 30, "3": 18, "4": 9, "5": 3 },
+  "dupeCoinsPerRarity": 250,
+  "setReward": { "coins": 2000, "gems": 25, "tickets": 2, "xp": 150 },
+  "sets": [
+    {
+      "id": "pirates_armory",
+      "name": "Pirate's Armory",
+      "color": "0xef4444",
+      "stickers": [
+        { "id": "sword", "name": "Cutlass", "icon": "ItemIcon_Weapon_Sword", "rarity": 1 },
+        { "id": "axe", "name": "Boarding Axe", "icon": "ItemIcon_Weapon_Axe", "rarity": 2 },
+        { "id": "bow", "name": "Longbow", "icon": "ItemIcon_Weapon_Bow", "rarity": 2 },
+        { "id": "hammer", "name": "War Hammer", "icon": "ItemIcon_Weapon_Hammer", "rarity": 3 },
+        { "id": "shield", "name": "Buckler", "icon": "ItemIcon_Weapon_Shield", "rarity": 4 },
+        { "id": "swordshield", "name": "Captain's Arms", "icon": "ItemIcon_Weapon_SwordShield", "rarity": 5 }
+      ]
+    },
+    {
+      "id": "gem_hoard",
+      "name": "Gem Hoard",
+      "color": "0xa78bfa",
+      "stickers": [
+        { "id": "gem_gray", "name": "Quartz", "icon": "ItemIcon_Gem_Pentagon_Gray", "rarity": 1 },
+        { "id": "gem_green", "name": "Emerald", "icon": "ItemIcon_Gem_Pentagon_Green", "rarity": 2 },
+        { "id": "gem_blue", "name": "Sapphire", "icon": "ItemIcon_Gem_Pentagon_Blue", "rarity": 2 },
+        { "id": "gem_yellow", "name": "Topaz", "icon": "ItemIcon_Gem_Pentagon_Yellow", "rarity": 3 },
+        { "id": "gem_red", "name": "Ruby", "icon": "ItemIcon_Gem_Pentagon_Red", "rarity": 4 },
+        { "id": "gem_purple", "name": "Amethyst", "icon": "ItemIcon_Gem_Pentagon_Purple", "rarity": 5 }
+      ]
+    },
+    {
+      "id": "explorers_kit",
+      "name": "Explorer's Kit",
+      "color": "0x4ade80",
+      "stickers": [
+        { "id": "letter", "name": "Old Letter", "icon": "ItemIcon_Letter", "rarity": 1 },
+        { "id": "bag1", "name": "Satchel", "icon": "ItemIcon_Bag01", "rarity": 2 },
+        { "id": "bag2", "name": "Rucksack", "icon": "ItemIcon_Bag02", "rarity": 2 },
+        { "id": "scroll", "name": "Sea Chart", "icon": "ItemIcon_Scroll", "rarity": 3 },
+        { "id": "key", "name": "Skeleton Key", "icon": "ItemIcon_Key", "rarity": 4 },
+        { "id": "map", "name": "Treasure Map", "icon": "ItemIcon_Map", "rarity": 5 }
+      ]
+    },
+    {
+      "id": "royal_treasure",
+      "name": "Royal Treasure",
+      "color": "0xfbbf24",
+      "stickers": [
+        { "id": "coin", "name": "Gold Doubloon", "icon": "ItemIcon_Coin", "rarity": 1 },
+        { "id": "medal", "name": "Medal Stand", "icon": "ItemIcon_Medalstand", "rarity": 2 },
+        { "id": "cup", "name": "Golden Goblet", "icon": "ItemIcon_Cup", "rarity": 2 },
+        { "id": "trophy", "name": "Champion's Cup", "icon": "ItemIcon_Trophy", "rarity": 3 },
+        { "id": "badge_crown", "name": "Royal Seal", "icon": "ItemIcon_Badge_Crown", "rarity": 4 },
+        { "id": "crown", "name": "King's Crown", "icon": "ItemIcon_Crown", "rarity": 5 }
+      ]
+    },
+    {
+      "id": "arcane_library",
+      "name": "Arcane Library",
+      "color": "0x38a3e0",
+      "stickers": [
+        { "id": "memopad", "name": "Field Notes", "icon": "ItemIcon_MemoPad", "rarity": 1 },
+        { "id": "book_brown", "name": "Leather Tome", "icon": "ItemIcon_Book02_Brown", "rarity": 2 },
+        { "id": "book_teal", "name": "Tide Manual", "icon": "ItemIcon_Book02_Teal", "rarity": 2 },
+        { "id": "book_red", "name": "Fire Grimoire", "icon": "ItemIcon_Book01_Red", "rarity": 3 },
+        { "id": "book_blue", "name": "Storm Codex", "icon": "ItemIcon_Book01_Blue", "rarity": 4 },
+        { "id": "grain", "name": "Golden Grain", "icon": "ItemIcon_Grain", "rarity": 5 }
+      ]
+    },
+    {
+      "id": "ghost_crew",
+      "name": "Ghost Crew",
+      "color": "0x94a3b8",
+      "stickers": [
+        { "id": "anvil", "name": "Cursed Anvil", "icon": "ItemIcon_Anvil", "rarity": 1 },
+        { "id": "megaphone", "name": "Fog Horn", "icon": "ItemIcon_Megaphone", "rarity": 2 },
+        { "id": "skull", "name": "Old Bones", "icon": "ItemIcon_Skull", "rarity": 2 },
+        { "id": "skull1", "name": "First Mate", "icon": "ItemIcon_Skull01", "rarity": 3 },
+        { "id": "skull2", "name": "Ghost Captain", "icon": "ItemIcon_Skull02", "rarity": 4 },
+        { "id": "fox", "name": "Spirit Fox", "icon": "ItemIcon_Fox", "rarity": 5 }
+      ]
+    },
+    {
+      "id": "crystal_cache",
+      "name": "Crystal Cache",
+      "color": "0x2dd4bf",
+      "stickers": [
+        { "id": "tri_gray", "name": "Shard", "icon": "ItemIcon_Gem_Triangle_Gray", "rarity": 1 },
+        { "id": "tri_green", "name": "Jade Point", "icon": "ItemIcon_Gem_Triangle_Green", "rarity": 2 },
+        { "id": "tri_blue", "name": "Ice Point", "icon": "ItemIcon_Gem_Triangle_Blue", "rarity": 2 },
+        { "id": "tri_yellow", "name": "Sun Point", "icon": "ItemIcon_Gem_Triangle_Yellow", "rarity": 3 },
+        { "id": "tri_red", "name": "Blood Point", "icon": "ItemIcon_Gem_Triangle_Red", "rarity": 4 },
+        { "id": "tri_purple", "name": "Void Point", "icon": "ItemIcon_Gem_Triangle_Purple", "rarity": 5 }
+      ]
+    },
+    {
+      "id": "beach_party",
+      "name": "Beach Party",
+      "color": "0x5bc8f5",
+      "stickers": [
+        { "id": "star", "name": "Starfish", "icon": "ItemIcon_Star", "rarity": 1 },
+        { "id": "ticket", "name": "Party Pass", "icon": "ItemIcon_Ticket_Yellow", "rarity": 2 },
+        { "id": "shop1", "name": "Tiki Stand", "icon": "ItemIcon_Shop01", "rarity": 2 },
+        { "id": "shop2", "name": "Beach Bar", "icon": "ItemIcon_Shop02", "rarity": 3 },
+        { "id": "badge_energy", "name": "Surf Badge", "icon": "ItemIcon_Badge_Energy", "rarity": 4 },
+        { "id": "helmet", "name": "Diver's Helm", "icon": "ItemIcon_Helmet", "rarity": 5 }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { api } from '../utils/api.js';
 import { withPersistentState } from '../utils/persistentState.js';
 
 /**
@@ -251,29 +252,9 @@ export default class SettingsModal extends Phaser.GameObjects.Container {
       this.scene.statusBar.setResource('gems', 0, true);
       this.scene.statusBar.setResource('energy', 100, true);
 
-      // Reset in Supabase database
-      if (this.scene.supabase && this.scene.telegramUser) {
-        const { error } = await this.scene.supabase
-          .from('user_stats')
-          .update({
-            coins: 0,
-            gems: 0,
-            energy: 100,
-            last_energy_update: new Date().toISOString(),
-            first_time_events: {
-              guaranteed_mega_jackpot: false,
-              tutorial_completed: false,
-              welcome_bonus_claimed: false
-            }
-          })
-          .eq('telegram_id', this.scene.telegramUser.id);
-
-        if (error) {
-          throw error;
-        }
-
-        console.log('Stats reset successfully in database');
-      }
+      // Reset on the server (the Worker checks who is allowed to do this)
+      await api.devReset();
+      console.log('Stats reset successfully on server');
 
       // Show success feedback
       if (this.hapticEnabledState.get() && window.Telegram?.WebApp?.HapticFeedback) {

@@ -1,6 +1,10 @@
 import Phaser from 'phaser';
 import LoadingScene from './scenes/LoadingScene.js';
 import MainScene from './scenes/MainScene.js';
+import WheelScene from './scenes/WheelScene.js';
+import StickersScene from './scenes/StickersScene.js';
+import EarnScene from './scenes/EarnScene.js';
+import ShopScene from './scenes/ShopScene.js';
 
 // Get portrait dimensions even if device starts in landscape
 const portraitWidth = window.innerWidth > window.innerHeight ? window.innerHeight : window.innerWidth;
@@ -27,7 +31,7 @@ const config = {
     touch: true,
     mouse: true
   },
-  scene: [LoadingScene, MainScene],
+  scene: [LoadingScene, MainScene, WheelScene, StickersScene, EarnScene, ShopScene],
   backgroundColor: '#1a1a2e'
 };
 
@@ -47,6 +51,7 @@ let game;
 document.fonts.ready.then(() => {
   console.log('Fonts ready, starting game');
   game = new Phaser.Game(config);
+  window.__game = game; // debug handle (harmless in production)
 });
 
 export default game;

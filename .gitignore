@@ -2,11 +2,15 @@
 node_modules/
 
 # Build output
-# dist/  # Uncomment to ignore dist folder if using Cloudflare Pages build command
+dist/
 
 # Environment variables
 .env
 .env.local
+.dev.vars
+
+# Wrangler
+.wrangler/
 
 # Editor directories
 .vscode/

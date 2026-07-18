@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import LoadingSlider from '../components/LoadingSlider.js';
+import { stickerAssetList } from '../config/stickers.js';
 
 export default class LoadingScene extends Phaser.Scene {
   constructor() {
@@ -120,6 +121,34 @@ export default class LoadingScene extends Phaser.Scene {
     loader.image('toggle_bg_off', '/assets/Components/UI_Etc/Switch01_Demo_Bg_Off.Png');
     loader.image('toggle_button_on', '/assets/Components/UI_Etc/Switch01_Demo_Button_On.Png');
     loader.image('toggle_button_off', '/assets/Components/UI_Etc/Switch01_Demo_Button_Off.Png');
+
+    // Tab scene chrome: title ribbons
+    loader.image('ribbon_yellow', '/assets/Components/Label/Label_Ribbon01_Yellow.png');
+    loader.image('ribbon_green', '/assets/Components/Label/Label_Ribbon01_Green.png');
+    loader.image('ribbon_purple', '/assets/Components/Label/Label_Ribbon01_Purple.png');
+    loader.image('ribbon_red', '/assets/Components/Label/Label_Ribbon01_Red.png');
+    loader.image('ribbon_magenta', '/assets/Components/Label/Label_Ribbon01_Magenta.png');
+
+    // Buttons (UIButton component)
+    loader.image('btn_yellow', '/assets/Components/Button/Button01_Demo_Yellow.png');
+    loader.image('btn_blue', '/assets/Components/Button/Button01_Demo_Blue.png');
+    loader.image('btn_red', '/assets/Components/Button/Button01_Demo_Red.png');
+    loader.image('btn_gray', '/assets/Components/Button/Button01_Demo_Gray.png');
+    loader.image('btn_sky', '/assets/Components/Button/Button01_Demo_Sky.png');
+
+    // Shared feature UI (tasks, shop, stickers, leaderboard)
+    loader.image('list_frame', '/assets/Components/Frame/ListFrame01_White1.png');
+    loader.image('item_frame_white', '/assets/Components/Frame/ItemFrame01_White1.png');
+    loader.image('card_frame_dim', '/assets/Components/Frame/CardFrame01_Demo_Bg_Dim.png');
+    loader.image('icon_check', '/assets/Components/IconMisc/Icon_Check.png');
+    loader.image('icon_star', '/assets/Components/IconMisc/Icon_Star01_s.png');
+    loader.image('icon_trophy', '/assets/Components/Icon_ItemIcons/128/ItemIcon_Trophy.png');
+    loader.image('alert_count', '/assets/Components/UI_Etc/Alert_Count_Red.Png');
+
+    // Sticker album placeholder art (48 icons from shared/stickers.json)
+    for (const [key, path] of stickerAssetList()) {
+      loader.image(key, path);
+    }
 
     // Sounds
     loader.audio('chest_sound', '/assets/sounds/treasure_chest.mp3');
