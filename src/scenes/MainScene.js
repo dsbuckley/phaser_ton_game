@@ -15,6 +15,7 @@ import UISlideSystem from '../systems/UISlideSystem.js';
 import RewardEffectsSystem from '../systems/RewardEffectsSystem.js';
 import ComboSystem from '../systems/ComboSystem.js';
 import AutoPopSystem from '../systems/AutoPopSystem.js';
+import EnergySystem from '../systems/EnergySystem.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -25,7 +26,6 @@ export default class MainScene extends Phaser.Scene {
     this.audioUnlocked = false;
     this.firstClick = false;
     this.lastClickTime = 0;
-    this.batteryRegenTimer = null;
     this.isJackpotPlaying = false;
     this.isAutoPopping = false; // Flag to prevent manual clicks during auto-pop sequence
 
@@ -113,6 +113,9 @@ export default class MainScene extends Phaser.Scene {
     // Auto-pop sequences (10 free chest opens after catching a drop)
     this.autoPop = new AutoPopSystem(this);
 
+    // Energy countdown tick + offline-regen notification
+    this.energy = new EnergySystem(this);
+
     // Tear down all systems when the scene shuts down or is destroyed
     this.events.once('shutdown', () => this.destroySystems());
     this.events.once('destroy', () => this.destroySystems());
@@ -122,17 +125,14 @@ export default class MainScene extends Phaser.Scene {
 
     // Show offline regeneration notification if energy was gained
     if (this.offlineEnergyGained > 0) {
-      this.showOfflineRegenNotification(this.offlineEnergyGained);
+      this.energy.showOfflineRegenNotification(this.offlineEnergyGained);
     }
-
-    // Start battery regeneration timer
-    this.startBatteryRegeneration();
 
     // Start the sync loop (flushes gameplay deltas to the Worker)
     this.startSyncLoop();
 
     // Start energy countdown timer updates (updates every second)
-    this.startEnergyCountdownUpdate();
+    this.energy.startCountdown();
 
     // MainScene sleeps while satellite tab scenes are open. On wake,
     // refresh the visible UI from shared state (satellites may have
@@ -147,7 +147,7 @@ export default class MainScene extends Phaser.Scene {
       if (this.bottomTabMenu) {
         this.bottomTabMenu.setActiveTab('main');
       }
-      this.updateEnergyTimerVisibility();
+      this.energy.updateEnergyTimerVisibility();
       // Pull authoritative stats in case a satellite changed them server-side
       this.flushSync();
     });
@@ -160,86 +160,6 @@ export default class MainScene extends Phaser.Scene {
   setupOrientationHandling() {
     // Game canvas is locked to portrait dimensions
     // Scale.NONE with CENTER_BOTH keeps it centered with black bars in landscape
-  }
-
-  showOfflineRegenNotification(energyGained) {
-    const centerX = this.cameras.main.width / 2;
-    const startY = 150; // Start below battery bar
-
-    // Create notification container with background
-    const notification = this.add.container(centerX, startY);
-
-    // Create background pill (similar to StatusBar style)
-    const bgWidth = 280;
-    const bgHeight = 60;
-    const bg = this.add.nineslice(
-      0, 0,
-      'statusbar_bg_small',
-      null,
-      bgWidth, bgHeight,
-      11, 11, 15, 15
-    );
-    bg.setOrigin(0.5);
-
-    // Create energy icon (matching StatusBar energy icon)
-    const icon = this.add.image(-100, -5, 'statusbar_energy');
-    icon.setScale(0.85); // Larger icon for better visibility
-
-    // Create main text
-    const mainText = this.add.text(10, -8, `+${energyGained} Energy`, {
-      fontFamily: 'Tilt Warp',
-      fontSize: '22px',
-      fill: '#4ADE80', // Green color for positive gain
-      stroke: '#000000',
-      strokeThickness: 4,
-      padding: { x: 10, y: 10 },
-      resolution: 2
-    }).setOrigin(0.5);
-
-    // Create subtitle text
-    const subtitleText = this.add.text(10, 12, 'while you were away', {
-      fontFamily: 'LINESeed',
-      fontSize: '14px',
-      fill: '#FFFFFF',
-      stroke: '#000000',
-      strokeThickness: 3,
-      padding: { x: 5, y: 5 },
-      resolution: 2
-    }).setOrigin(0.5);
-
-    // Add elements to container
-    notification.add([bg, icon, mainText, subtitleText]);
-    notification.setAlpha(0);
-    notification.setDepth(2000); // Above everything
-
-    // Animate: Fade in, slide down, pause, fade out
-    this.tweens.add({
-      targets: notification,
-      alpha: 1,
-      y: startY + 30,
-      duration: 400,
-      ease: 'Back.out',
-      onComplete: () => {
-        // Hold for 2 seconds
-        this.time.delayedCall(2000, () => {
-          // Fade out
-          this.tweens.add({
-            targets: notification,
-            alpha: 0,
-            y: startY + 50,
-            duration: 400,
-            ease: 'Power2',
-            onComplete: () => notification.destroy()
-          });
-        });
-      }
-    });
-  }
-
-  startBatteryRegeneration() {
-    // DISABLED: Energy now regenerates hourly (5 energy per hour on the hour)
-    // No active regeneration timer needed - calculations happen on game load
-    console.log('Active energy regeneration disabled - using hourly system');
   }
 
   /** Tear down every extracted system (idempotent — runs on shutdown and destroy). */
@@ -263,6 +183,10 @@ export default class MainScene extends Phaser.Scene {
     if (this.autoPop) {
       this.autoPop.destroy();
       this.autoPop = null;
+    }
+    if (this.energy) {
+      this.energy.destroy();
+      this.energy = null;
     }
   }
 
@@ -673,9 +597,9 @@ export default class MainScene extends Phaser.Scene {
         this.statusBar.setResource('energy', energy, false);
         this.statusBar.setLevel(s.user_level || 1);
       }
-      this.updateEnergyTimerVisibility();
+      this.energy.updateEnergyTimerVisibility();
       if (res.granted_energy > 0) {
-        this.showOfflineRegenNotification(res.granted_energy);
+        this.energy.showOfflineRegenNotification(res.granted_energy);
       }
       if (res.clamped) {
         console.warn('Server clamped last sync batch (values corrected)');
@@ -715,7 +639,7 @@ export default class MainScene extends Phaser.Scene {
     if (this.batteryState.get() < 100) {
       this.batteryState.set(100);
       this.statusBar?.setResource('energy', 100, true);
-      this.updateEnergyTimerVisibility();
+      this.energy.updateEnergyTimerVisibility();
     }
     this.ticketsState.add(tickets);
     if (packs > 0) gameState.stickerPacks.add(packs);
@@ -840,54 +764,6 @@ export default class MainScene extends Phaser.Scene {
     this.lastFlushTime = Date.now();
   }
 
-  startEnergyCountdownUpdate() {
-    // Update countdown timer every second
-    this.countdownUpdateTimer = this.time.addEvent({
-      delay: 1000, // 1 second
-      callback: () => {
-        // Hourly grants are server-side: when the server-provided grant
-        // time passes, flush a sync — the response applies the grant and
-        // shows the "+N energy" notification via applyServerState()
-        if (this.nextGrantAt && Date.now() >= this.nextGrantAt && !this.syncInFlight) {
-          this.nextGrantAt = null; // reset until server sends the next one
-          this.flushSync();
-        }
-
-        // Update countdown timer display
-        if (this.energyCountdownTimer && this.energyCountdownTimer.visible) {
-          this.energyCountdownTimer.updateCountdown();
-        }
-      },
-      loop: true
-    });
-
-    // Clean up timer on scene shutdown
-    this.events.once('shutdown', () => {
-      if (this.countdownUpdateTimer) {
-        this.countdownUpdateTimer.remove();
-      }
-    });
-
-    // Clean up timer on scene destroy
-    this.events.once('destroy', () => {
-      if (this.countdownUpdateTimer) {
-        this.countdownUpdateTimer.remove();
-      }
-    });
-  }
-
-  updateEnergyTimerVisibility() {
-    if (!this.energyCountdownTimer) return;
-
-    const currentEnergy = this.batteryState.get();
-    const shouldBeVisible = currentEnergy < 100;
-
-    // Only update if visibility needs to change
-    if (this.energyCountdownTimer.visible !== shouldBeVisible) {
-      this.energyCountdownTimer.setVisible(shouldBeVisible);
-    }
-  }
-
   async initTonConnect() {
     try {
       // Initialize TON Connect UI
@@ -993,7 +869,7 @@ export default class MainScene extends Phaser.Scene {
     this.statusBar.setResource('energy', newBattery, true);
 
     // Update energy countdown timer visibility
-    this.updateEnergyTimerVisibility();
+    this.energy.updateEnergyTimerVisibility();
 
     // Increment total chests opened counter
     const chestsOpened = this.totalChestsOpenedState.get();

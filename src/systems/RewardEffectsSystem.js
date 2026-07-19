@@ -411,7 +411,7 @@ export default class RewardEffectsSystem {
       this.scene.statusBar.setResource('energy', newTotal, true);
 
       // Update energy countdown timer visibility
-      this.scene.updateEnergyTimerVisibility();
+      this.scene.energy.updateEnergyTimerVisibility();
 
       // Update BatteryBar display (will show over 100) - only if it exists
       if (this.scene.batteryBar && this.scene.batteryBar.setBattery) {
