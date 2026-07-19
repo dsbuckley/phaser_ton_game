@@ -56,9 +56,10 @@ Config: `wrangler.toml`; the browser never talks to Supabase.
   envelopes — **clamping** impossible claims (never rejecting) and logging them to `sync_audit`.
   Hourly energy grants (+5/hour, cap 100) use server time. Wheel spins, task claims, purchases,
   sticker packs, and level rewards are all rolled server-side.
-- **Client sync layer:** `syncBuffer` / `flushSync` / `applyServerState` in
-  `src/scenes/MainScene.js`, with the fetch wrapper in `src/utils/api.js` (falls back to a dev
-  mock so the game runs offline; failed batches re-queue).
+- **Client sync layer:** `SyncSystem` (`src/systems/SyncSystem.js`) — owns the delta buffer,
+  flush loop, page-hide beacon, and `applyServerState` reconciliation; accessed from scene
+  code as `this.sync.buffer` / `this.sync.flush()`. Fetch wrapper in `src/utils/api.js`
+  (falls back to a dev mock so the game runs offline; failed batches re-queue).
 - **Monetization:** Telegram Stars catalog in `server/config/products.ts`; invoices via
   `createInvoiceLink` (currency XTR). Crediting happens ONLY in the webhook on
   `successful_payment`, idempotent on `telegram_payment_charge_id` (`credit_purchase`).
@@ -79,6 +80,7 @@ Config: `wrangler.toml`; the browser never talks to Supabase.
 server/            Worker: index.ts, middleware/auth.ts, routes/*, config/*, lib/*
 src/scenes/        LoadingScene, MainScene (chest tapping; sleeps/wakes),
                    BaseTabScene + WheelScene/StickersScene/EarnScene/ShopScene (start/stop fresh)
+src/systems/       MainScene system classes (constructor(scene) + destroy(), see below)
 src/components/    Reusable UI (see below)
 src/config/        tabs.js (navigation), levels.js, wheel.js, stickers.js
 src/state/         gameState.js — registry-style cross-scene state; server values reconcile in
@@ -125,6 +127,24 @@ first tap before playing (see the `audioUnlocked` pattern in MainScene).
 **Loading:** LoadingScene is two-stage — preload only the progress-bar textures, then load all
 game assets through a secondary `LoaderPlugin` with real progress. Localhost skips the
 production minimum display time.
+
+### Systems (`src/systems/`)
+
+MainScene's non-visual logic lives in system classes (`constructor(scene)`, explicit
+`destroy()`, torn down via `MainScene.destroySystems()` on shutdown/destroy). Systems talk
+through the scene (`this.scene.sync.buffer`, `this.scene.rewards.createCoinConfetti(...)`);
+scene-wide state (gameState accessors, `statusBar`, `isJackpotPlaying`, `isAutoPopping`,
+`firstTimeEvents`) stays on MainScene, which keeps `openChest()` as the coordinator.
+
+| System | Purpose |
+|---|---|
+| SyncSystem | Delta buffer + flush loop + beacon + `applyServerState` reconciliation |
+| RewardEffectsSystem | Coin confetti, catchable emerald/energy/auto-pop drops, mega jackpot stream |
+| AutoPopSystem | 10-chest auto-open sequences (stackable); `openChestAutoPop` |
+| ComboSystem | Rapid-catch combo tracking + bonus grants |
+| EnergySystem | 1s countdown tick (triggers hourly-grant flush), timer visibility, offline-regen toast |
+| UISlideSystem | Slides UI chrome out/in around chest-opening effects |
+| AmbientSystem | Sun, parallax clouds, sparkles, chest/palm animation registrations |
 
 ### Components (`src/components/`)
 
