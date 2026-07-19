@@ -191,9 +191,9 @@ export default class AutoPopSystem {
 
     // Record deltas: auto-pop chests are free (no energy) — the server
     // validates them against collected auto-pops (10 opens each)
-    this.scene.syncBuffer.chests_opened++;
-    this.scene.syncBuffer.auto_pop_chests++;
-    this.scene.syncBuffer.xp_earned++;
+    this.scene.sync.buffer.chests_opened++;
+    this.scene.sync.buffer.auto_pop_chests++;
+    this.scene.sync.buffer.xp_earned++;
     this.scene.gainXp(1);
 
     // Determine payout size (same probability as normal, level-scaled)

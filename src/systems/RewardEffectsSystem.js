@@ -117,7 +117,7 @@ export default class RewardEffectsSystem {
       const currentCoins = this.scene.coinsState.get();
       const newTotal = currentCoins + coinAmount;
       this.scene.coinsState.set(newTotal);
-      this.scene.syncBuffer.coins_earned += coinAmount;
+      this.scene.sync.buffer.coins_earned += coinAmount;
 
       // Update StatusBar with animation
       this.scene.statusBar.setResource('coins', newTotal, true);
@@ -216,7 +216,7 @@ export default class RewardEffectsSystem {
       const currentGems = this.scene.gemsState.get();
       const newTotal = currentGems + 1;
       this.scene.gemsState.set(newTotal);
-      this.scene.syncBuffer.gems_earned += 1;
+      this.scene.sync.buffer.gems_earned += 1;
 
       // Update StatusBar with animation
       this.scene.statusBar.setResource('gems', newTotal, true);
@@ -405,7 +405,7 @@ export default class RewardEffectsSystem {
       const currentEnergy = this.scene.batteryState.get();
       const newTotal = currentEnergy + 1;
       this.scene.batteryState.set(newTotal);
-      this.scene.syncBuffer.energy_collected += 1;
+      this.scene.sync.buffer.energy_collected += 1;
 
       // Update StatusBar energy display (even if over 100)
       this.scene.statusBar.setResource('energy', newTotal, true);
@@ -595,7 +595,7 @@ export default class RewardEffectsSystem {
       }
 
       // Record the collected auto-pop for the next sync
-      this.scene.syncBuffer.auto_pops_collected++;
+      this.scene.sync.buffer.auto_pops_collected++;
 
       // Start Auto Pop sequence
       this.scene.autoPop.start();
@@ -796,7 +796,7 @@ export default class RewardEffectsSystem {
         const currentCoins = this.scene.coinsState.get();
         const newTotal = currentCoins + coinsPerBurst;
         this.scene.coinsState.set(newTotal);
-        this.scene.syncBuffer.coins_earned += coinsPerBurst;
+        this.scene.sync.buffer.coins_earned += coinsPerBurst;
 
         // Update StatusBar with animation
         this.scene.statusBar.setResource('coins', newTotal, true);

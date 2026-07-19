@@ -119,13 +119,13 @@ export default class ComboSystem {
       const currentEnergy = this.scene.batteryState.get();
       const newEnergy = currentEnergy + bonusAmount;
       this.scene.batteryState.set(newEnergy);
-      this.scene.syncBuffer.energy_collected += bonusAmount;
+      this.scene.sync.buffer.energy_collected += bonusAmount;
       this.scene.statusBar.setResource('energy', newEnergy, true);
     } else if (itemType === 'gems') {
       const currentGems = this.scene.gemsState.get();
       const newGems = currentGems + bonusAmount;
       this.scene.gemsState.set(newGems);
-      this.scene.syncBuffer.gems_earned += bonusAmount;
+      this.scene.sync.buffer.gems_earned += bonusAmount;
       this.scene.statusBar.setResource('gems', newGems, true);
     }
 

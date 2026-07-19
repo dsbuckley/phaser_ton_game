@@ -90,9 +90,9 @@ export default class EnergySystem {
         // Hourly grants are server-side: when the server-provided grant
         // time passes, flush a sync — the response applies the grant and
         // shows the "+N energy" notification via applyServerState()
-        if (this.scene.nextGrantAt && Date.now() >= this.scene.nextGrantAt && !this.scene.syncInFlight) {
-          this.scene.nextGrantAt = null; // reset until server sends the next one
-          this.scene.flushSync();
+        if (this.scene.sync.nextGrantAt && Date.now() >= this.scene.sync.nextGrantAt && !this.scene.sync.syncInFlight) {
+          this.scene.sync.nextGrantAt = null; // reset until server sends the next one
+          this.scene.sync.flush();
         }
 
         // Update countdown timer display

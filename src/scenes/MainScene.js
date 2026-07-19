@@ -16,6 +16,7 @@ import RewardEffectsSystem from '../systems/RewardEffectsSystem.js';
 import ComboSystem from '../systems/ComboSystem.js';
 import AutoPopSystem from '../systems/AutoPopSystem.js';
 import EnergySystem from '../systems/EnergySystem.js';
+import SyncSystem from '../systems/SyncSystem.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -28,35 +29,6 @@ export default class MainScene extends Phaser.Scene {
     this.lastClickTime = 0;
     this.isJackpotPlaying = false;
     this.isAutoPopping = false; // Flag to prevent manual clicks during auto-pop sequence
-
-    // Server sync state: gameplay deltas accumulate here between flushes.
-    // The Worker validates each batch and returns authoritative stats.
-    this.syncBuffer = this.createEmptySyncBuffer();
-    this.pendingFirstTimeEvents = {};
-    this.syncInFlight = false;
-    this.syncPending = false;
-    this.lastFlushTime = Date.now();
-    this.nextGrantAt = null; // server timestamp of the next hourly energy grant
-  }
-
-  createEmptySyncBuffer() {
-    return {
-      chests_opened: 0,
-      auto_pop_chests: 0,
-      coins_earned: 0,
-      gems_earned: 0,
-      energy_collected: 0,
-      mega_jackpots: 0,
-      auto_pops_collected: 0,
-      xp_earned: 0
-    };
-  }
-
-  bufferHasDeltas() {
-    const b = this.syncBuffer;
-    return b.chests_opened > 0 || b.coins_earned > 0 || b.gems_earned > 0 ||
-      b.energy_collected > 0 || b.mega_jackpots > 0 || b.auto_pops_collected > 0 ||
-      Object.keys(this.pendingFirstTimeEvents).length > 0;
   }
 
   async create() {
@@ -93,8 +65,10 @@ export default class MainScene extends Phaser.Scene {
     // Get Telegram WebApp user data (display only — trust comes from the server)
     this.getTelegramUserData();
 
-    // Authenticate with the Worker and load authoritative stats
-    await this.initializeUser();
+    // Server sync system: authenticate with the Worker and load
+    // authoritative stats (gameplay deltas accumulate in sync.buffer)
+    this.sync = new SyncSystem(this);
+    await this.sync.initialize();
 
     // Ambient background system (chest/palm anims, sun, clouds, sparkles)
     this.ambient = new AmbientSystem(this);
@@ -129,7 +103,7 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // Start the sync loop (flushes gameplay deltas to the Worker)
-    this.startSyncLoop();
+    this.sync.startLoop();
 
     // Start energy countdown timer updates (updates every second)
     this.energy.startCountdown();
@@ -149,7 +123,7 @@ export default class MainScene extends Phaser.Scene {
       }
       this.energy.updateEnergyTimerVisibility();
       // Pull authoritative stats in case a satellite changed them server-side
-      this.flushSync();
+      this.sync.flush();
     });
   }
 
@@ -187,6 +161,10 @@ export default class MainScene extends Phaser.Scene {
     if (this.energy) {
       this.energy.destroy();
       this.energy = null;
+    }
+    if (this.sync) {
+      this.sync.destroy(); // beacons out any un-flushed deltas
+      this.sync = null;
     }
   }
 
@@ -352,14 +330,14 @@ export default class MainScene extends Phaser.Scene {
           this.sound.setMute(true);
         }
         // Sync settings to the server when toggled
-        this.flushSync();
+        this.sync.flush();
       },
       onHapticToggle: (enabled) => {
         console.log('Haptic toggle:', enabled);
         // Haptic feedback is automatically handled in the modal component
         // based on the hapticEnabled state
         // Sync settings to the server when toggled
-        this.flushSync();
+        this.sync.flush();
       }
     });
     this.add.existing(this.settingsModal);
@@ -525,88 +503,6 @@ export default class MainScene extends Phaser.Scene {
     }
   }
 
-  async initializeUser() {
-    try {
-      const res = await api.auth();
-      this.applyServerState(res, { initial: true });
-      console.log('Authenticated with server, stats loaded');
-    } catch (error) {
-      console.error('Failed to authenticate with server:', error);
-      console.log('Continuing with localStorage values as fallback');
-      // Don't throw - game stays playable offline; sync retries later
-    }
-  }
-
-  /**
-   * Reconcile local state with the authoritative server response.
-   * On initial load the server values are applied directly. Mid-play,
-   * un-flushed deltas in the sync buffer are layered on top so the UI
-   * never visibly "rolls back" rewards the player just earned.
-   */
-  applyServerState(res, { initial = false } = {}) {
-    if (!res || !res.stats) {
-      // Mock/offline response - keep local values
-      if (initial) {
-        this.loadedSoundEnabled = true;
-        this.loadedHapticEnabled = true;
-      }
-      return;
-    }
-
-    const s = res.stats;
-    const b = this.syncBuffer;
-    const paidChests = Math.max(b.chests_opened - b.auto_pop_chests, 0);
-
-    const coins = (s.coins ?? 0) + b.coins_earned;
-    const gems = (s.gems ?? 0) + b.gems_earned;
-    const energy = Math.max((s.energy ?? 100) + b.energy_collected - paidChests, 0);
-    const chests = (s.total_chests_opened ?? 0) + b.chests_opened;
-    const xp = (s.xp ?? 0) + b.xp_earned;
-
-    this.coinsState.set(coins);
-    this.ticketsState.set(s.tickets ?? 0);
-    this.gemsState.set(gems);
-    this.batteryState.set(energy);
-    this.xpState.set(xp);
-    this.userLevelState.set(Math.max(s.user_level || 1, levelFromXp(xp)));
-    this.totalChestsOpenedState.set(chests);
-    if (typeof s.sticker_packs === 'number') gameState.stickerPacks.set(s.sticker_packs);
-    if (typeof s.auto_pops === 'number') gameState.autoPops.set(s.auto_pops);
-
-    // First-time flags: server state + anything set locally since last flush
-    this.firstTimeEvents = {
-      ...(s.first_time_events || this.firstTimeEvents),
-      ...this.pendingFirstTimeEvents
-    };
-
-    if (res.next_grant_at) {
-      this.nextGrantAt = new Date(res.next_grant_at).getTime();
-    }
-
-    if (initial) {
-      this.loadedSoundEnabled = s.sound_enabled ?? true;
-      this.loadedHapticEnabled = s.haptic_enabled ?? true;
-      if (res.granted_energy > 0) {
-        this.offlineEnergyGained = res.granted_energy;
-      }
-    } else {
-      // Mid-play reconcile: refresh the visible pills
-      if (this.statusBar) {
-        this.statusBar.setResource('coins', coins, false);
-        this.statusBar.setResource('gems', gems, false);
-        this.statusBar.setResource('energy', energy, false);
-        this.statusBar.setLevel(s.user_level || 1);
-      }
-      this.energy.updateEnergyTimerVisibility();
-      if (res.granted_energy > 0) {
-        this.energy.showOfflineRegenNotification(res.granted_energy);
-      }
-      if (res.clamped) {
-        console.warn('Server clamped last sync batch (values corrected)');
-      }
-    }
-  }
-
   /**
    * Add XP and handle level-ups. The server runs the same curve and
    * grants the same rewards authoritatively (grant_level_rewards);
@@ -661,107 +557,7 @@ export default class MainScene extends Phaser.Scene {
     const bonusPct = Math.round((coinMultiplier(newLevel) - 1) * 100);
     this.showSuccess(`Chest coins +${bonusPct}% at level ${newLevel}!`);
 
-    this.flushSync();
-  }
-
-  /**
-   * Flush accumulated gameplay deltas to the Worker. The server validates
-   * the batch (energy accounting, rate caps, reward envelopes), applies
-   * hourly grants, and returns authoritative stats for reconciliation.
-   */
-  async flushSync() {
-    if (this.syncInFlight) {
-      this.syncPending = true;
-      return;
-    }
-
-    const buffer = this.syncBuffer;
-    const firstTime = this.pendingFirstTimeEvents;
-    this.syncBuffer = this.createEmptySyncBuffer();
-    this.pendingFirstTimeEvents = {};
-
-    const payload = this.buildSyncPayload(buffer, firstTime);
-    this.lastFlushTime = Date.now();
-    this.syncInFlight = true;
-
-    try {
-      const res = await api.sync(payload);
-      this.applyServerState(res);
-    } catch (error) {
-      console.error('Sync failed, re-queueing deltas:', error);
-      this.mergeBufferBack(buffer, firstTime);
-    } finally {
-      this.syncInFlight = false;
-      if (this.syncPending) {
-        this.syncPending = false;
-        this.flushSync();
-      }
-    }
-  }
-
-  buildSyncPayload(buffer, firstTime) {
-    let soundEnabled;
-    let hapticEnabled;
-    if (this.settingsModal) {
-      soundEnabled = this.settingsModal.soundEnabledState.get();
-      hapticEnabled = this.settingsModal.hapticEnabledState.get();
-    }
-    return {
-      ...buffer,
-      elapsed_ms: Math.max(Date.now() - this.lastFlushTime, 0),
-      sound_enabled: soundEnabled,
-      haptic_enabled: hapticEnabled,
-      first_time_events: Object.keys(firstTime).length > 0 ? firstTime : undefined
-    };
-  }
-
-  /** Re-queue deltas from a failed flush so nothing is lost. */
-  mergeBufferBack(buffer, firstTime) {
-    const b = this.syncBuffer;
-    for (const key of Object.keys(buffer)) {
-      b[key] += buffer[key];
-    }
-    this.pendingFirstTimeEvents = { ...firstTime, ...this.pendingFirstTimeEvents };
-  }
-
-  startSyncLoop() {
-    // Flush deltas every 10 seconds (skip when idle — hourly-grant flushes
-    // are triggered separately by the countdown timer)
-    this.autoSaveTimer = this.time.addEvent({
-      delay: 10000,
-      callback: () => {
-        if (this.bufferHasDeltas()) this.flushSync();
-      },
-      loop: true
-    });
-
-    // Flush when the scene shuts down or is destroyed
-    this.events.once('shutdown', () => this.flushSyncBeacon());
-    this.events.once('destroy', () => this.flushSyncBeacon());
-
-    // Flush when the tab/app is hidden (sendBeacon survives close)
-    this.pageHideHandler = () => {
-      if (document.visibilityState === 'hidden') {
-        this.flushSyncBeacon();
-      }
-    };
-    document.addEventListener('visibilitychange', this.pageHideHandler);
-    window.addEventListener('pagehide', this.pageHideHandler);
-    this.events.once('destroy', () => {
-      document.removeEventListener('visibilitychange', this.pageHideHandler);
-      window.removeEventListener('pagehide', this.pageHideHandler);
-    });
-  }
-
-  /** Fire-and-forget flush for page-hide/shutdown moments. */
-  flushSyncBeacon() {
-    if (!this.bufferHasDeltas()) return;
-    const buffer = this.syncBuffer;
-    const firstTime = this.pendingFirstTimeEvents;
-    this.syncBuffer = this.createEmptySyncBuffer();
-    this.pendingFirstTimeEvents = {};
-    api.syncBeacon(this.buildSyncPayload(buffer, firstTime));
-    this.lastFlushTime = Date.now();
+    this.sync.flush();
   }
 
   async initTonConnect() {
@@ -876,8 +672,8 @@ export default class MainScene extends Phaser.Scene {
     this.totalChestsOpenedState.set(chestsOpened + 1);
 
     // Record delta for the next server sync (1 chest = 1 XP)
-    this.syncBuffer.chests_opened++;
-    this.syncBuffer.xp_earned++;
+    this.sync.buffer.chests_opened++;
+    this.sync.buffer.xp_earned++;
     this.gainXp(1);
 
     // Note: uiSlide.startSlideBackMonitoring() is now called AFTER confetti spawns
@@ -901,7 +697,7 @@ export default class MainScene extends Phaser.Scene {
 
       // Mark as used (synced to server on next flush; only false->true allowed)
       this.firstTimeEvents.guaranteed_mega_jackpot = true;
-      this.pendingFirstTimeEvents.guaranteed_mega_jackpot = true;
+      this.sync.pendingFirstTimeEvents.guaranteed_mega_jackpot = true;
       console.log('First-time mega jackpot flag set to true');
     } else if (rand < 0.005) {
       // 0.5% mega jackpot (normal probability)
@@ -941,7 +737,7 @@ export default class MainScene extends Phaser.Scene {
       this.player.setTexture('chest_0027');
 
       // Record the jackpot delta for the next sync
-      this.syncBuffer.mega_jackpots++;
+      this.sync.buffer.mega_jackpots++;
 
       // Start streaming mega jackpot immediately
       this.rewards.streamMegaJackpotCoins(coinReward);
@@ -992,7 +788,7 @@ export default class MainScene extends Phaser.Scene {
     // Flush immediately on the important moments; otherwise the 10s
     // sync loop picks the deltas up
     if (isMegaJackpot || newBattery <= 0) {
-      this.flushSync();
+      this.sync.flush();
     }
   }
 
