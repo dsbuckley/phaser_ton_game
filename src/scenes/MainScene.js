@@ -14,6 +14,7 @@ import AmbientSystem from '../systems/AmbientSystem.js';
 import UISlideSystem from '../systems/UISlideSystem.js';
 import RewardEffectsSystem from '../systems/RewardEffectsSystem.js';
 import ComboSystem from '../systems/ComboSystem.js';
+import AutoPopSystem from '../systems/AutoPopSystem.js';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -27,8 +28,6 @@ export default class MainScene extends Phaser.Scene {
     this.batteryRegenTimer = null;
     this.isJackpotPlaying = false;
     this.isAutoPopping = false; // Flag to prevent manual clicks during auto-pop sequence
-    this.autoPopCountText = null; // Reference to countdown text
-    this.autoPopPopsRemaining = 0; // Counter for remaining auto-pops (can stack)
 
     // Server sync state: gameplay deltas accumulate here between flushes.
     // The Worker validates each batch and returns authoritative stats.
@@ -110,6 +109,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Combo tracking for rapid specialty-item catches
     this.combo = new ComboSystem(this);
+
+    // Auto-pop sequences (10 free chest opens after catching a drop)
+    this.autoPop = new AutoPopSystem(this);
 
     // Tear down all systems when the scene shuts down or is destroyed
     this.events.once('shutdown', () => this.destroySystems());
@@ -257,6 +259,10 @@ export default class MainScene extends Phaser.Scene {
     if (this.combo) {
       this.combo.destroy();
       this.combo = null;
+    }
+    if (this.autoPop) {
+      this.autoPop.destroy();
+      this.autoPop = null;
     }
   }
 
@@ -1112,258 +1118,6 @@ export default class MainScene extends Phaser.Scene {
     if (isMegaJackpot || newBattery <= 0) {
       this.flushSync();
     }
-  }
-
-  startAutoPopSequence() {
-    // If already auto-popping, add 10 to the existing counter
-    if (this.isAutoPopping && this.autoPopCountText) {
-      // Add 10 more pops to the queue
-      if (!this.autoPopPopsRemaining) {
-        this.autoPopPopsRemaining = 10;
-      }
-      this.autoPopPopsRemaining += 10;
-
-      // Update the text immediately to show new total
-      this.autoPopCountText.setText(`Auto Pop ${this.autoPopPopsRemaining}`);
-
-      // Flash the text to indicate addition
-      this.tweens.add({
-        targets: this.autoPopCountText,
-        scaleX: 1.5,
-        scaleY: 1.5,
-        duration: 150,
-        ease: 'Back.out',
-        yoyo: true
-      });
-
-      return; // Don't start a new sequence
-    }
-
-    // Store original energy value to restore after sequence
-    const originalEnergy = this.batteryState.get();
-
-    // Set flag to prevent manual chest clicks
-    this.isAutoPopping = true;
-
-    // Disable chest interactivity
-    this.player.disableInteractive();
-
-    // Create countdown text at top of screen
-    const centerX = this.cameras.main.width / 2;
-    const topY = 75; // Closer to the top
-
-    // Create spinning light in front of text
-    this.autoPopLight = this.add.image(centerX, topY, 'jackpot_light')
-      .setOrigin(0.5)
-      .setDepth(3001) // In front of text (3000)
-      .setScale(1.0); // Full size
-
-    // Rotating animation for light
-    this.tweens.add({
-      targets: this.autoPopLight,
-      angle: 360,
-      duration: 2000, // 2 seconds per rotation
-      ease: 'Linear',
-      repeat: -1
-    });
-
-    this.autoPopCountText = this.add.text(centerX, topY, 'Auto Pop 10', {
-      fontFamily: 'Tilt Warp',
-      fontSize: '32px', // Smaller font size
-      fill: '#FF0000', // Start with red (will cycle through rainbow)
-      stroke: '#000000',
-      strokeThickness: 4,
-      padding: { x: 20, y: 20 },
-      resolution: 2
-    }).setOrigin(0.5).setDepth(3000); // Above everything
-
-    // Rainbow color animation (ROYGBIV)
-    const rainbowColors = [
-      '#FF0000', // Red
-      '#FF7F00', // Orange
-      '#FFFF00', // Yellow
-      '#00FF00', // Green
-      '#0000FF', // Blue
-      '#4B0082', // Indigo
-      '#9400D3'  // Violet
-    ];
-
-    // Create color cycling timeline
-    let colorIndex = 0;
-    this.autoPopColorTimer = this.time.addEvent({
-      delay: 150, // Change color every 150ms
-      callback: () => {
-        if (this.autoPopCountText && this.autoPopCountText.active) {
-          colorIndex = (colorIndex + 1) % rainbowColors.length;
-          this.autoPopCountText.setColor(rainbowColors[colorIndex]);
-        }
-      },
-      loop: true
-    });
-
-    // Pulsing animation for countdown text (subtle now)
-    this.tweens.add({
-      targets: this.autoPopCountText,
-      scaleX: 1.1,
-      scaleY: 1.1,
-      duration: 300,
-      ease: 'Sine.easeInOut',
-      yoyo: true,
-      repeat: -1
-    });
-
-    // Auto-pop loop: starts at 10, but can increase if more Auto Pops are clicked
-    this.autoPopPopsRemaining = 10;
-
-    const autoPopTimer = this.time.addEvent({
-      delay: 300, // 300ms between each pop
-      callback: () => {
-        // Update countdown text
-        this.autoPopCountText.setText(`Auto Pop ${this.autoPopPopsRemaining}`);
-
-        // Call openChest() but bypass energy consumption
-        this.openChestAutoPop();
-
-        this.autoPopPopsRemaining--;
-
-        // Check if sequence complete
-        if (this.autoPopPopsRemaining <= 0) {
-          autoPopTimer.remove();
-
-          // Wait 500ms before cleanup
-          this.time.delayedCall(500, () => {
-            // Restore energy (no net consumption during auto-pop)
-            this.batteryState.set(originalEnergy);
-            this.statusBar.setResource('energy', originalEnergy, true);
-
-            // Stop rainbow color timer
-            if (this.autoPopColorTimer) {
-              this.autoPopColorTimer.remove();
-              this.autoPopColorTimer = null;
-            }
-
-            // Fade out and remove countdown text and light
-            this.tweens.add({
-              targets: [this.autoPopCountText, this.autoPopLight],
-              alpha: 0,
-              duration: 300,
-              onComplete: () => {
-                this.autoPopCountText.destroy();
-                this.autoPopCountText = null;
-
-                if (this.autoPopLight) {
-                  this.autoPopLight.destroy();
-                  this.autoPopLight = null;
-                }
-              }
-            });
-
-            // Re-enable chest clicking
-            this.isAutoPopping = false;
-            this.autoPopPopsRemaining = 0;
-            this.player.setInteractive({ useHandCursor: true });
-          });
-        }
-      },
-      loop: true
-    });
-  }
-
-  openChestAutoPop() {
-    // This is a modified version of openChest() that:
-    // 1. Does NOT consume energy
-    // 2. CAN spawn emerald, energy, and Auto Pop rewards (same as normal gameplay)
-
-    // Record click time for battery regeneration logic
-    this.lastClickTime = this.time.now;
-
-    // Slide UI out (same as normal)
-    this.uiSlide.slideOut();
-
-    // Trigger haptic feedback
-    if (window.Telegram?.WebApp?.HapticFeedback) {
-      window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-    }
-
-    // NOTE: Energy is NOT consumed here (skip energy decrease)
-
-    // Increment total chests opened counter (for stats tracking)
-    const chestsOpened = this.totalChestsOpenedState.get();
-    this.totalChestsOpenedState.set(chestsOpened + 1);
-
-    // Record deltas: auto-pop chests are free (no energy) — the server
-    // validates them against collected auto-pops (10 opens each)
-    this.syncBuffer.chests_opened++;
-    this.syncBuffer.auto_pop_chests++;
-    this.syncBuffer.xp_earned++;
-    this.gainXp(1);
-
-    // Determine payout size (same probability as normal, level-scaled)
-    const rand = Math.random();
-    const playerLevel = this.userLevelState.get();
-    let coinReward, isBigPayout = false;
-
-    // NOTE: Mega jackpot disabled during auto-pop (too disruptive)
-    if (rand < 0.10) {
-      // 10% big payout
-      isBigPayout = true;
-      coinReward = scaleCoins(Phaser.Utils.Array.GetRandom([75, 100, 125, 150]), playerLevel);
-    } else {
-      // 90% normal payout
-      coinReward = scaleCoins(Phaser.Math.Between(3, 49), playerLevel);
-    }
-
-    // Determine if emerald reward should spawn (10% chance)
-    const isEmeraldReward = Math.random() < 0.1;
-
-    // Determine if energy reward should spawn (25% chance)
-    const isEnergyReward = Math.random() < 0.25;
-
-    // Auto Pop rewards do NOT spawn during auto-pop sequences (prevents chaos)
-    const isAutoPopReward = false;
-
-    // Play chest sound
-    this.sound.play(isBigPayout ? 'chest_sound_big' : 'chest_sound');
-
-    // Play chest opening animation
-    this.player.play('chest_open', true);
-
-    // Trigger reward after 300ms delay
-    this.time.delayedCall(300, () => {
-      // Always spawn coin confetti
-      this.rewards.createCoinConfetti(coinReward, isBigPayout);
-
-      // 10% chance: ALSO spawn emerald
-      if (isEmeraldReward) {
-        this.rewards.createEmeraldReward();
-      }
-
-      // 25% chance: ALSO spawn energy (1-3 items randomly)
-      if (isEnergyReward) {
-        const energyCount = Phaser.Math.Between(1, 3);
-        for (let i = 0; i < energyCount; i++) {
-          // Stagger spawns slightly for better visual effect
-          this.time.delayedCall(i * 50, () => {
-            this.rewards.createEnergyReward();
-          });
-        }
-      }
-
-      // 50% chance: ALSO spawn Auto Pop item
-      if (isAutoPopReward) {
-        this.rewards.createAutoPopReward();
-      }
-
-      // Start monitoring for UI slide back
-      this.uiSlide.startSlideBackMonitoring();
-    });
-
-    // Play closing animation
-    this.time.delayedCall(500, () => {
-      this.player.play('chest_close', true);
-    });
-
-    // Deltas are picked up by the 10-second sync loop
   }
 
   async onWalletConnected(wallet) {

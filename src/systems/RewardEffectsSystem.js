@@ -598,7 +598,7 @@ export default class RewardEffectsSystem {
       this.scene.syncBuffer.auto_pops_collected++;
 
       // Start Auto Pop sequence
-      this.scene.startAutoPopSequence();
+      this.scene.autoPop.start();
 
       // Bubble pop animation - scale up and fade out
       this.scene.tweens.add({
