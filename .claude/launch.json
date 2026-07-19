@@ -10,9 +10,10 @@
     },
     {
       "name": "worker",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["wrangler", "dev", "--port", "8787"],
-      "port": 8787
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "exec npx wrangler dev --port \"${PORT:-8787}\""],
+      "port": 8787,
+      "autoPort": true
     }
   ]
 }
