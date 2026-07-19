@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { getGateReason, showPlatformGate } from './utils/platformGate.js';
 import LoadingScene from './scenes/LoadingScene.js';
 import MainScene from './scenes/MainScene.js';
 import WheelScene from './scenes/WheelScene.js';
@@ -46,9 +47,16 @@ if (window.Telegram?.WebApp) {
   // }
 }
 
+// Desktop / logged-out users get a "play on your phone" screen instead of the game
+const gateReason = getGateReason();
+
 // Wait for fonts to load before starting the game
 let game;
 document.fonts.ready.then(() => {
+  if (gateReason) {
+    showPlatformGate(gateReason);
+    return;
+  }
   console.log('Fonts ready, starting game');
   game = new Phaser.Game(config);
   window.__game = game; // debug handle (harmless in production)
